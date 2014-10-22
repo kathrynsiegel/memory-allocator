@@ -1,0 +1,94 @@
+[2014-10-09 12:09:36,788]    INFO opentuner.search.plugin.DisplayPlugin: tests=468, best {0: 13.703868881686844, 1: 189.7212318254078}, cost time=532.0314, found by NormalGreedyMutation @plugin.py:102
+[2014-10-09 12:09:37,727]    INFO opentuner.search.metatechniques: AUCBanditMetaTechniqueA: [('NormalGreedyMutation', 252), ('UniformGreedyMutation', 104), ('RandomNelderMead', 73), ('DifferentialEvolutionAlt', 72)] @metatechniques.py:63
+[2014-10-09 12:09:46,863]    INFO opentuner.search.plugin.DisplayPlugin: tests=816, best {0: 13.703868881686844, 1: 189.7212318254078}, cost time=532.0314, found by NormalGreedyMutation @plugin.py:102
+[2014-10-09 12:09:52,325]    INFO opentuner.search.metatechniques: AUCBanditMetaTechniqueA: [('UniformGreedyMutation', 127), ('NormalGreedyMutation', 126), ('DifferentialEvolutionAlt', 125), ('RandomNelderMead', 123)] @metatechniques.py:63
+[2014-10-09 12:09:53,030] WARNING opentuner.search.driver: duplicate configuration request #1025 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:09:53,438] WARNING opentuner.search.driver: duplicate configuration request #1037 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:09:54,758] WARNING opentuner.search.driver: duplicate configuration request #1081 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:09:55,518] WARNING opentuner.search.driver: duplicate configuration request #1106 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:09:56,054] WARNING opentuner.search.driver: duplicate configuration request #1123 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:09:56,405] WARNING opentuner.search.driver: duplicate configuration request #1135 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:09:56,949]    INFO opentuner.search.plugin.DisplayPlugin: tests=1146, best {0: 13.703868881686844, 1: 189.7212318254078}, cost time=532.0314, found by NormalGreedyMutation @plugin.py:102
+[2014-10-09 12:10:07,047]    INFO opentuner.search.plugin.DisplayPlugin: tests=1466, best {0: 20.22704913687653, 1: 408.8737978516642}, cost time=376.4248, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:10:08,006]    INFO opentuner.search.metatechniques: AUCBanditMetaTechniqueA: [('DifferentialEvolutionAlt', 127), ('UniformGreedyMutation', 126), ('NormalGreedyMutation', 125), ('RandomNelderMead', 123)] @metatechniques.py:63
+[2014-10-09 12:10:08,162] WARNING opentuner.search.driver: duplicate configuration request #1507 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:09,811] WARNING opentuner.search.driver: duplicate configuration request #1555 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:13,778] WARNING opentuner.search.driver: duplicate configuration request #1673 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:14,333] WARNING opentuner.search.driver: duplicate configuration request #1691 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:17,121]    INFO opentuner.search.plugin.DisplayPlugin: tests=1766, best {0: 17.31576720630028, 1: 299.57586724056773}, cost time=272.9604, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:10:17,990] WARNING opentuner.search.driver: duplicate configuration request #1803 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:22,163] WARNING opentuner.search.driver: duplicate configuration request #1927 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:24,814]    INFO opentuner.search.metatechniques: AUCBanditMetaTechniqueA: [('UniformGreedyMutation', 126), ('DifferentialEvolutionAlt', 126), ('RandomNelderMead', 125), ('NormalGreedyMutation', 124)] @metatechniques.py:63
+[2014-10-09 12:10:26,316] WARNING opentuner.search.driver: duplicate configuration request #2042 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:27,246]    INFO opentuner.search.plugin.DisplayPlugin: tests=2055, best {0: 15.201061967670398, 1: 231.08791025174742}, cost time=201.6946, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:10:27,911] WARNING opentuner.search.driver: duplicate configuration request #2086 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:28,055] WARNING opentuner.search.driver: duplicate configuration request #2090 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:36,390] WARNING opentuner.search.driver: duplicate configuration request #2321 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:36,439] WARNING opentuner.search.driver: duplicate configuration request #2323 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:37,337]    INFO opentuner.search.plugin.DisplayPlugin: tests=2331, best {0: 11.645704247334152, 1: 135.67758638830446}, cost time=113.6353, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:10:43,208]    INFO opentuner.search.metatechniques: AUCBanditMetaTechniqueA: [('NormalGreedyMutation', 126), ('RandomNelderMead', 126), ('DifferentialEvolutionAlt', 126), ('UniformGreedyMutation', 123)] @metatechniques.py:63
+[2014-10-09 12:10:43,506] WARNING opentuner.search.driver: duplicate configuration request #2513 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:43,983] WARNING opentuner.search.driver: duplicate configuration request #2527 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:45,391] WARNING opentuner.search.driver: duplicate configuration request #2561 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:46,196] WARNING opentuner.search.driver: duplicate configuration request #2582 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:46,490] WARNING opentuner.search.driver: duplicate configuration request #2590 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:46,507] WARNING opentuner.search.driver: duplicate configuration request #2591 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:47,080] WARNING opentuner.search.driver: duplicate configuration request #2606 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:47,452]    INFO opentuner.search.plugin.DisplayPlugin: tests=2592, best {0: 10.153537959144387, 1: 103.1035087491307}, cost time=83.7957, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:10:47,870] WARNING opentuner.search.driver: duplicate configuration request #2626 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:49,237] WARNING opentuner.search.driver: duplicate configuration request #2661 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:56,197] WARNING opentuner.search.driver: duplicate configuration request #2841 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:56,216] WARNING opentuner.search.driver: duplicate configuration request #2842 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:57,414] WARNING opentuner.search.driver: duplicate configuration request #2874 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:10:57,491]    INFO opentuner.search.plugin.DisplayPlugin: tests=2847, best {0: 7.214645987605877, 1: 52.03354524559563}, cost time=38.6527, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:11:00,897] WARNING opentuner.search.driver: duplicate configuration request #2962 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:02,655]    INFO opentuner.search.metatechniques: AUCBanditMetaTechniqueA: [('UniformGreedyMutation', 126), ('NormalGreedyMutation', 126), ('RandomNelderMead', 125), ('DifferentialEvolutionAlt', 124)] @metatechniques.py:63
+[2014-10-09 12:11:03,192] WARNING opentuner.search.driver: duplicate configuration request #3018 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:05,276] WARNING opentuner.search.driver: duplicate configuration request #3067 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:06,599] WARNING opentuner.search.driver: duplicate configuration request #3098 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:06,617] WARNING opentuner.search.driver: duplicate configuration request #3099 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:07,095] WARNING opentuner.search.driver: duplicate configuration request #3111 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:07,631]    INFO opentuner.search.plugin.DisplayPlugin: tests=3089, best {0: 5.02081735226318, 1: 25.127224911438816}, cost time=16.8293, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:11:10,297] WARNING opentuner.search.driver: duplicate configuration request #3186 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:14,024] WARNING opentuner.search.driver: duplicate configuration request #3279 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:17,453] WARNING opentuner.search.driver: duplicate configuration request #3362 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:17,692]    INFO opentuner.search.plugin.DisplayPlugin: tests=3330, best {0: 3.8716442286568054, 1: 14.966446649494515}, cost time=8.3001, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:11:18,115] WARNING opentuner.search.driver: duplicate configuration request #3379 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:18,742] WARNING opentuner.search.driver: duplicate configuration request #3393 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:18,777] WARNING opentuner.search.driver: duplicate configuration request #3395 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:19,377] WARNING opentuner.search.driver: duplicate configuration request #3410 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:20,561] WARNING opentuner.search.driver: duplicate configuration request #3439 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:22,210] WARNING opentuner.search.driver: duplicate configuration request #3477 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:22,900] WARNING opentuner.search.driver: duplicate configuration request #3494 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:23,403]    INFO opentuner.search.metatechniques: AUCBanditMetaTechniqueA: [('UniformGreedyMutation', 126), ('NormalGreedyMutation', 125), ('RandomNelderMead', 125), ('DifferentialEvolutionAlt', 125)] @metatechniques.py:63
+[2014-10-09 12:11:25,557] WARNING opentuner.search.driver: duplicate configuration request #3553 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:26,782] WARNING opentuner.search.driver: duplicate configuration request #3583 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:27,113] WARNING opentuner.search.driver: duplicate configuration request #3590 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:27,763]    INFO opentuner.search.plugin.DisplayPlugin: tests=3556, best {0: 2.5524508841679108, 1: 6.476562043220952}, cost time=2.5579, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:11:36,370] WARNING opentuner.search.driver: duplicate configuration request #3803 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:37,794]    INFO opentuner.search.plugin.DisplayPlugin: tests=3787, best {0: 1.9213445358392391, 1: 3.7047522288315804}, cost time=0.8663, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:11:42,441] WARNING opentuner.search.driver: duplicate configuration request #3943 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:45,238]    INFO opentuner.search.metatechniques: AUCBanditMetaTechniqueA: [('UniformGreedyMutation', 126), ('DifferentialEvolutionAlt', 126), ('RandomNelderMead', 125), ('NormalGreedyMutation', 124)] @metatechniques.py:63
+[2014-10-09 12:11:47,075] WARNING opentuner.search.driver: duplicate configuration request #4045 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:48,002]    INFO opentuner.search.plugin.DisplayPlugin: tests=4013, best {0: 1.2963447060432145, 1: 1.6791505572424512}, cost time=0.0880, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:11:49,346] WARNING opentuner.search.driver: duplicate configuration request #4095 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:52,334] WARNING opentuner.search.driver: duplicate configuration request #4157 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:53,046] WARNING opentuner.search.driver: duplicate configuration request #4173 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:54,794] WARNING opentuner.search.driver: duplicate configuration request #4209 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:57,178] WARNING opentuner.search.driver: duplicate configuration request #4263 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:11:58,142]    INFO opentuner.search.plugin.DisplayPlugin: tests=4228, best {0: 1.0001332963662435, 1: 1.0004037683950173}, cost time=0.0000, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:12:00,632] WARNING opentuner.search.driver: duplicate configuration request #4337 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:12:01,372] WARNING opentuner.search.driver: duplicate configuration request #4353 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:12:03,652] WARNING opentuner.search.driver: duplicate configuration request #4402 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:12:06,280] WARNING opentuner.search.driver: duplicate configuration request #4458 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:12:08,257]    INFO opentuner.search.plugin.DisplayPlugin: tests=4440, best {0: 0.9999970971126686, 1: 0.9999945985264276}, cost time=0.0000, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:12:08,722]    INFO opentuner.search.metatechniques: AUCBanditMetaTechniqueA: [('NormalGreedyMutation', 126), ('RandomNelderMead', 126), ('DifferentialEvolutionAlt', 126), ('UniformGreedyMutation', 123)] @metatechniques.py:63
+[2014-10-09 12:12:12,146] WARNING opentuner.search.driver: duplicate configuration request #4578 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:12:14,909] WARNING opentuner.search.driver: duplicate configuration request #4635 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:12:16,269] WARNING opentuner.search.driver: duplicate configuration request #4661 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:12:18,404]    INFO opentuner.search.plugin.DisplayPlugin: tests=4641, best {0: 0.9999999887095328, 1: 0.9999999785592308}, cost time=0.0000, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:12:18,929] WARNING opentuner.search.driver: duplicate configuration request #4714 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:12:21,434] WARNING opentuner.search.driver: duplicate configuration request #4767 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:12:28,598]    INFO opentuner.search.plugin.DisplayPlugin: tests=4847, best {0: 1.0000000000038654, 1: 1.0000000000017053}, cost time=0.0000, found by RandomNelderMead @plugin.py:102
+[2014-10-09 12:12:31,866] WARNING opentuner.search.driver: duplicate configuration request #4979 DifferentialEvolutionAlt/DifferentialEvolutionAlt OLD @driver.py:135
+[2014-10-09 12:12:33,163]    INFO opentuner.search.plugin.DisplayPlugin: tests=4938, best {0: 0.9999999999977263, 1: 0.9999999999959073}, cost time=0.0000, found by RandomNelderMead @plugin.py:102

@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+LANKATOOLS=/afs/csail.mit.edu/proj/courses/6.172/bin/
+
+#VERBOSE=0
+#TARGETS=""
+#while [[ $# > 0 ]]
+#do
+#    if [ "$1" == "-v" ]; then
+#	VERBOSE=1
+#    elif [ -e "$1" ]; then
+#	TARGETS+="$1 " 
+#    fi
+#    shift
+#done
+#
+#if [ "${TARGETS}" != "" ]; then
+#    if [ ${VERBOSE} == "1" ]; then
+#	echo "Putting $TARGETS on Lanka."
+#    fi
+#
+#    ${LANKATOOLS}/lput $TARGETS
+#
+#elif [ ${VERBOSE} == "1" ]; then
+#    echo "No targets to put on Lanka."
+#fi
+
+
+ ${LANKATOOLS}/lup mdriver ./traces 
