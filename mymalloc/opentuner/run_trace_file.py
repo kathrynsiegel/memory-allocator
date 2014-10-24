@@ -102,7 +102,7 @@ class MdriverTuner(MeasurementInterface):
     if lanka==0:
         bin_cmd = './mdriver -g -f ' + self.args.trace_file
     else:
-        bin_cmd = './mdriver -g -f ' + self.args.trace_file + ' >> lanka_out'
+        bin_cmd = 'lexec ./mdriver -g -f ' + self.args.trace_file + ' >> lanka_out'
 
     run_result = self.call_program(bin_cmd, limit=2)
     if lanka==0:
