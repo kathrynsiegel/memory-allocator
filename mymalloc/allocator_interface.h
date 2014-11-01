@@ -26,6 +26,8 @@
 #ifndef _ALLOCATOR_INTERFACE_H
 #define _ALLOCATOR_INTERFACE_H
 
+typedef void* (*relocate_callback_t)(void* state, void* old, void* new);
+
 /* Function pointers for a malloc implementation.  This is used to allow a
  * single validator to operate on both libc malloc, a buggy malloc, and the
  * student "mm" malloc.
@@ -54,6 +56,30 @@ static const malloc_impl_t libc_impl =
 { .init = &libc_init, .malloc = &libc_malloc, .realloc = &libc_realloc,
   .free = &libc_free, .check = &libc_check, .reset_brk = &libc_reset_brk,
   .heap_lo = &libc_heap_lo, .heap_hi = &libc_heap_hi};
+
+/* alignment helpers, alignment must be power of 2 */
+#define ALIGNED(x, alignment) ((((uint64_t)x) & ((alignment)-1)) == 0)
+#define ALIGN_FORWARD(x, alignment) \
+    ((((uint64_t)x) + ((alignment)-1)) & (~((uint64_t)(alignment)-1)))
+#define ALIGN_BACKWARD(x, alignment) (((uint64_t)x) & (~((uint64_t)(alignment)-1)))
+#define PAD(length, alignment) (ALIGN_FORWARD((length), (alignment)) - (length))
+#define ALIGN_MOD(addr, size, alignment) \
+    ((((uint64_t)addr)+(size)-1) & ((alignment)-1))
+#define CROSSES_ALIGNMENT(addr, size, alignment) \
+    (ALIGN_MOD(addr, size, alignment) < (size)-1)
+/* number of bytes you need to shift addr forward so that it's !CROSSES_ALIGNMENT */
+#define ALIGN_SHIFT_SIZE(addr, size, alignment) \
+    (CROSSES_ALIGNMENT(addr, size, alignment) ?   \
+        ((size) - 1 - ALIGN_MOD(addr, size, alignment)) : 0)
+
+// All blocks must have a specified minimum alignment.
+// The alignment requirement (from config.h) is >= 8 bytes.
+#define ALLOC_ALIGNMENT 8
+#define ALLOC_ALIGN(size) ALIGN_FORWARD(size, ALLOC_ALIGNMENT)
+
+#define CACHE_ALIGNMENT 64
+#define CACHE_ALIGN(size) ALIGN_FORWARD(size, CACHE_ALIGNMENT)
+
 
 int my_init();
 void * my_malloc(size_t size);
