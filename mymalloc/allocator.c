@@ -75,7 +75,7 @@ void smart_register_relocate_callback(relocate_callback_t f, void* state)
 #define BUCKET_7 0x6
 #define LAST_BUCKET BUCKET_7
 
-#define SIZE_PTR(p) (void*)(((uint64_t)p&~1))
+#define SIZE_PTR(p) (void*)(((uint64_t)p&~0xF))
 #define IS_SIZE32(p) ((uint8_t)(*(SIZE_PTR(p))) == BUCKET_1)
 #define IS_SIZE64(p) ((uint8_t)(*(SIZE_PTR(p))) == BUCKET_2)
 #define IS_SIZE128(p) ((uint8_t)(*(SIZE_PTR(p))) == BUCKET_3)
@@ -215,7 +215,7 @@ void * my_malloc(size_t size) {
   // printf("smart_malloc %d -> %p\n", size, p);
 
   // increment pointer by four bytes
-  p = (void*)((uint64_t)p + 0x8); //TODO
+  p = (void*)((uint64_t)p + 0xF); //TODO
 
   // then fill that byte with info containing size
   void * sizeptr = SIZE_PTR(p);
@@ -431,12 +431,34 @@ void my_free(void *ptr) {
   free_list_t** head;
   // printf("smart_free %ld -> %p\n", IS_SMALL(p) ? 32 : 64, p);
 
-  if (IS_SIZE32(ptr)) {
-    head = &free_list32;
-  } else if (IS_SIZE64(ptr)) {
-    head = &free_list64;
-  } else if (IS_SIZE128)
-  free_list_t* fn = SMART_PTR(ptr);
+  void * sizeptr = SIZE_PTR(p);
+  uint8_t bucket = (uint8_t)(*sizeptr);
+  switch (bucket) {
+    case BUCKET_1:
+      head = &free_list32;
+      break;
+    case BUCKET_2:
+      head = &free_list64;
+      break;
+    case BUCKET_3:
+      head = &free_list128;
+      break;
+    case BUCKET_4:
+      head = &free_list256;
+      break;
+    case BUCKET_5:
+      head = &free_list512;
+      break;
+    case BUCKET_6:
+      head = &free_list1024;
+      break;
+    default:
+      subdivideBucket(SIZE_1024, ptr);
+      head = &free_list1024;
+      break;
+  }
+
+  free_list_t* fn = sizeptr;
   fn->next = *head;
   *head = fn;
 }
