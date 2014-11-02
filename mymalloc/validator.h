@@ -66,7 +66,7 @@ static int add_range(const malloc_impl_t *impl, range_t **ranges, char *lo,
     malloc_error(tracenum, 0, "impl init failed.");
 
   // The payload must not overlap any other payloads
-  range_t *p;
+  p = NULL;
   range_t *pnext;
   for (p = *ranges; p != NULL; p = pnext) {
     if (p->lo <= hi && p->hi >= hi || p-> lo <= lo && p->hi >= lo)
@@ -94,8 +94,8 @@ static void remove_range(range_t **ranges, char *lo) {
 
   // Handle the case where the list head has the payload
   if (prevpp->lo == lo) {
-    ranges = &pprev->next;
-    free(pprev);
+    ranges = &prevpp->next;
+    free(prevpp);
     return;
   }
 
@@ -207,7 +207,7 @@ int eval_mm_valid(const malloc_impl_t *impl, trace_t *trace, int tracenum) {
                   "impl realloc failed: data at location %x[%d] "
                   "has been corrupted. New value: %x (%d)",
                   trace->blocks[index], j, trace->blocks[index][j],
-                  trace->blocks[index][j])) 
+                  trace->blocks[index][j])); 
           }
           trace->blocks[index][j] = j;
         }

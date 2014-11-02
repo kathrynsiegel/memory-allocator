@@ -93,9 +93,9 @@ int my_init() {
     free_lists[i] = NULL;
   }
 
-  for (int i = 0; i < NUM_BUCKETS; i++) {
-    BUCKET_SIZE(i) = 1<<(5 + i);
-  }
+  // for (int i = 0; i < NUM_BUCKETS; i++) {
+  //   BUCKET_SIZE(i) = 1<<(5 + i);
+  // }
 
   void *brk = mem_heap_hi() + 1;
   int req_size = CACHE_ALIGN(brk) - (uint64_t)brk;
@@ -120,7 +120,6 @@ int get_bucket_size(size_t size) {
 void * my_malloc(size_t size) {
   /* add to free list with different size now! */
   free_list_t** head = NULL;
-  uint8_t bucket;
   void *p = NULL;
   int bucket_idx = get_bucket_size(size);
 
@@ -166,8 +165,8 @@ void * my_malloc(size_t size) {
   p = (void*)((uint64_t)p + 0xF); //TODO
 
   // then fill that byte with info containing size
-  void * sizeptr = SIZE_PTR(p);
-  *sizeptr = (uint8_t)bucket;
+  uint8_t * sizeptr = SIZE_PTR(p);
+  *sizeptr = (uint8_t)bucket_idx;
 
   return p;
 }
@@ -186,7 +185,7 @@ int coalesceEntries(size_t size, void* p) {
   if (relocate_callback) {
     int can_coalesce = 0;
 
-    for (int i = NUM_BUCKETS-2; i > BUCKET_1; i--) {
+    for (int i = NUM_BUCKETS-2; i > 0; i--) {
       if (size < BUCKET_SIZE(i+1) && free_lists[i] && free_lists[i]->next) {
         cur_free_list = free_lists[i];
         large_size = BUCKET_SIZE(i+1);
@@ -217,7 +216,7 @@ int coalesceEntries(size_t size, void* p) {
         p1 -= small_size;
         p = p1;
       }
-      assert(ALIGNED(p, CACHE_ALIGNMENT));
+      // assert(ALIGNED(p, CACHE_ALIGNMENT));
 
       /* RELOCATE should ignore us if the entry is no longer VALID
        * We could ask whether one or the other is a valid object
@@ -255,7 +254,7 @@ void * subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
     // make sure it's actually too big.
     printf("ERROR! subdivideBucket called with too small bucket!!");
     return;
-  } else if (bucket_idx == BUCKET_1 || !FITS_INTO_BUCKET(size, bucket_idx-1)) {
+  } else if (bucket_idx == 0 || !FITS_INTO_BUCKET(size, bucket_idx-1)) {
     return;
   }
 
@@ -276,7 +275,7 @@ void * subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
   bucket_idx -= 1;
   
   // If size is too big for the next smaller index, we're done
-  if (bucket_idx == BUCKET_1 || !FITS_INTO_BUCKET(size, bucket_idx))
+  if (bucket_idx == 0 || !FITS_INTO_BUCKET(size, bucket_idx))
     return;
 
   // otherwise recurse
@@ -307,7 +306,7 @@ void * alloc_aligned(size_t size) {
 
   void *p = mem_sbrk(size);
 
-  assert(ALIGNED(p, size));
+  // assert(ALIGNED(p, size));
   //  printf("alloc %p %ld\n", p, size);
 
   if (p == (void *)-1) {
@@ -322,7 +321,7 @@ void my_free(void *ptr) {
     return;
   }
   /* add to free list with different size now! */
-  void * sizeptr = SIZE_PTR(ptr);
+  uint8_t * sizeptr = SIZE_PTR(ptr);
   uint8_t bucket = *sizeptr;
   free_list_t** head = &free_lists[bucket];
   free_list_t* fn = sizeptr;
