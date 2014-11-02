@@ -99,7 +99,7 @@ int get_bucket_size(size_t size);
 void * my_malloc(size_t size);
 int coalesceEntries(size_t size, void* p);
 void subdivideBucket(size_t size, int bucket_idx, free_list_t* head);
-void * alloc_aligned(size_t size);
+void * alloc_aligned(int bucket_idx);
 void * my_realloc(void *ptr, size_t size);
 void my_free(void *ptr);
 int my_check();

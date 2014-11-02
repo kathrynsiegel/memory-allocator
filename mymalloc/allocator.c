@@ -54,7 +54,7 @@
 #define NUM_BUCKETS MAX_SIZE_LOG_2 - MIN_SIZE_LOG_2
 #define SIZE_CACHE_LINE 64
 
-#define SIZE_PTR(p) (void*)(((uint64_t*)p-1))
+#define SIZE_PTR(p) (size_t*)(((char*)p-SIZE_T_SIZE))
 
 #define BUCKET_SIZE(i) (1<<((i)+MIN_SIZE_LOG_2))
 
@@ -78,12 +78,15 @@ int my_init() {
 }
 
 int get_bucket_size(size_t size) {
+  // printf("size: %lu\n", size);
   int i = 0;
+  size += 8;
   size >>= 5;
   while (size) {
     i++;
     size >>= 1;
   }
+  // printf("bucket: %d\n", i);
   return i;
 }
 
@@ -99,8 +102,9 @@ void * my_malloc(size_t size) {
     // printf("taking from exact size bucket\n");
     head = &free_lists[bucket_idx];
     p = *head;
-    printf("bucket stats: %lu %lu\n", bucket_idx, *head);
+    printf("bucket stats: %d %p\n", bucket_idx, *head);
     free_lists[bucket_idx] = (*head)->next;
+    printf("set bucket %d to %p\n", bucket_idx, free_lists[bucket_idx]);
   } else {
     // Find an open bucket that is larger than the one we need
     int open_bucket;
@@ -111,6 +115,7 @@ void * my_malloc(size_t size) {
       }
     }
     if (head != NULL) {
+      printf("subdivide bucket %d to fit size %d\n", open_bucket, size);
       // We have a free bucket, but it's too big: subdivide it and assign p.
       p = *head;
       subdivideBucket(size, open_bucket, *head);
@@ -124,7 +129,7 @@ void * my_malloc(size_t size) {
   // If p still has not been assigned, we need new heap space. 
   // allocate a new item
   if (!p) {
-    p = alloc_aligned(size);
+    p = alloc_aligned(bucket_idx);
   }
 
   if (p == (void *)-1) {
@@ -221,17 +226,18 @@ int coalesceEntries(size_t size, void* p) {
  */
 void subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
   // Handle when bucket size > 1024
-  if (!FITS_INTO_BUCKET(size, bucket_idx)) {
-    // make sure it's actually too big.
-    printf("ERROR! subdivideBucket called with too small bucket!!");
-    return;
-  } else if (bucket_idx == 0 || !FITS_INTO_BUCKET(size, bucket_idx-1)) {
-    return;
-  }
-
+  // if (!FITS_INTO_BUCKET(size, bucket_idx)) {
+  //   // make sure it's actually too big.
+  //   printf("ERROR! subdivideBucket called with too small bucket!!");
+  //   return;
+  // } //else if (bucket_idx == 0 || !FITS_INTO_BUCKET(size, bucket_idx-1)) {
+    //return;
+  //}
+  printf("subdividing using size %d\n", size);
   // Advance the pointer of the relevant free list, to let it know we're
   // stealing this chunk of memory
   free_lists[bucket_idx] = head->next;
+  printf("1) set free list %d to %p\n", bucket_idx, head->next);
   // our new size is smaller
   size_t new_bucket_size = BUCKET_SIZE(bucket_idx-1);
   // make room for the new bucket
@@ -239,20 +245,27 @@ void subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
   // put the first smaller bucket on the stack
   new_bucket->next = free_lists[bucket_idx-1];
   free_lists[bucket_idx-1] = new_bucket;
+  printf("2) set free list %d to %p\n", bucket_idx-1, new_bucket);
   // put the reassigned head on the stack
   head->next = new_bucket;
   free_lists[bucket_idx-1] = head;
+  printf("3) set free list %d to %p\n", bucket_idx-1, head);
 
   // If size is too big for the next smaller index, we're done
-  if (bucket_idx == 1 || !FITS_INTO_BUCKET(size, bucket_idx-1))
+  if (bucket_idx == 1 || !FITS_INTO_BUCKET(size, bucket_idx-1)) {
+    printf("we're done\n");
     return;
+  }
 
   // otherwise recurse
+  printf("recursively subdividing bucket %d with head %p\n", bucket_idx-1, head);
   subdivideBucket(size, bucket_idx-1, head);
 }
 
-void * alloc_aligned(size_t size) {
+void * alloc_aligned(int bucket_idx) {
   // TODO: this
+  // size_t nsize;
+  printf("regular alloc with bucket %d\n", bucket_idx);
   // for (int i = 0; i < NUM_BUCKETS; i++) {
   //   if (FITS_INTO_BUCKET(size, i))
   //     size = BUCKET_SIZE(i);
@@ -266,14 +279,16 @@ void * alloc_aligned(size_t size) {
   //   }
   // }
 
-  // // align if needed
+  // align if needed
   // void *brk = mem_heap_hi() + 1;
   // int req_size = CACHE_ALIGN(brk) - (uint64_t)brk;
   // if (req_size > 0) {
   //   mem_sbrk(req_size);
   // }
+  // size_t* size = BUCKET_SIZE(bucket_idx);
+  printf("adjusted size to %d\n", BUCKET_SIZE(bucket_idx));
 
-  void *p = mem_sbrk(size);
+  void *p = mem_sbrk(BUCKET_SIZE(bucket_idx));
 
   // assert(ALIGNED(p, size));
   //  printf("alloc %p %ld\n", p, size);
@@ -292,13 +307,14 @@ void my_free(void *ptr) {
   /* add to free list with different size now! */
   uint64_t * sizeptr = SIZE_PTR(ptr);
   uint64_t bucket = *sizeptr;
-  printf("bucket: %lu ", bucket);
-  free_list_t** head = &free_lists[bucket];
-  free_list_t* fn = (free_list_t*) sizeptr;
-  fn->next = *head;
-  printf("lists: %lu %lu\n", fn->next, *head);
+  
+  free_list_t* bucket_list = free_lists[bucket];
+  printf("free bucket: %lu previous head: %p ", bucket, bucket_list);
+  free_list_t* flist_node = (free_list_t*) sizeptr;
+  flist_node->next = bucket_list;
+  printf("new head: %p old head: %p\n", flist_node, bucket_list);
 
-  *head = fn;
+  free_lists[bucket] = flist_node;
 }
 
 // realloc - Implemented simply in terms of malloc and free
