@@ -62,15 +62,16 @@ static int add_range(const malloc_impl_t *impl, range_t **ranges, char *lo,
     malloc_error(tracenum, 0, "impl init failed.");
 
   // The payload must lie within the extent of the heap
-  if (lo < mem_heap_lo() || hi > mem_heap_hi())
+  if (lo < (char*)mem_heap_lo() || hi > (char*)mem_heap_hi())
     malloc_error(tracenum, 0, "impl init failed.");
 
   // The payload must not overlap any other payloads
   p = NULL;
   range_t *pnext;
   for (p = *ranges; p != NULL; p = pnext) {
-    if (p->lo <= hi && p->hi >= hi || p-> lo <= lo && p->hi >= lo)
+    if ((p->lo <= hi && p->hi >= hi) || (p-> lo <= lo && p->hi >= lo)) {
       malloc_error(tracenum, 0, "impl init failed.");
+    }
 
     pnext = p->next;
   }
@@ -81,7 +82,7 @@ static int add_range(const malloc_impl_t *impl, range_t **ranges, char *lo,
   range->lo = lo;
   range->hi = hi;
   range->next = *ranges;
-  ranges = range;
+  ranges = &range;
 
   return 1;
 }
@@ -203,11 +204,11 @@ int eval_mm_valid(const malloc_impl_t *impl, trace_t *trace, int tracenum) {
         // fill the new extra space with stuff.
         for (int j = 0; j < size; j++) {
           if (j < oldsize && trace->blocks[index][j] != j) {
-            malloc_error(tracenum, i, sprintf(
-                  "impl realloc failed: data at location %x[%d] "
+            printf("impl realloc failed: data at location %x[%d] "
                   "has been corrupted. New value: %x (%d)",
                   trace->blocks[index], j, trace->blocks[index][j],
-                  trace->blocks[index][j])); 
+                  (int)trace->blocks[index][j]);
+            malloc_error(tracenum, i, "bloop"); 
           }
           trace->blocks[index][j] = j;
         }

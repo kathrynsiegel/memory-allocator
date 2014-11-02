@@ -49,19 +49,6 @@
 // The smallest aligned size that will hold a size_t value.
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
-// typedef struct used_header_t {
-//    size_t size;
-// } used_header_t;
-// #define HEADER_T_SIZE (ALLOC_ALIGN(sizeof(used_header_t)))
-
-// relocate_callback_t relocate_callback = NULL;
-// void* relocate_state = NULL;
-// void smart_register_relocate_callback(relocate_callback_t f, void* state)
-// {
-//   relocate_callback = f;
-//   relocate_state = state;
-// }
-
 #define MAX_SIZE_LOG_2 29
 #define MIN_SIZE_LOG_2 5
 #define NUM_BUCKETS MAX_SIZE_LOG_2 - MIN_SIZE_LOG_2
@@ -74,18 +61,9 @@
 #define FITS_INTO_BUCKET(size, bucket_idx) ((size) <= (BUCKET_SIZE(bucket_idx)-8))
 
 free_list_t *free_lists[NUM_BUCKETS];
-/*
-free_list_t *free_list32;
-free_list_t *free_list64;
-free_list_t *free_list128;
-free_list_t *free_list256;
-free_list_t *free_list512;
-free_list_t *free_list1024;
-*/
 
 // init - Initialize the malloc package.  Called once before any other
-// calls are made.  Since this is a very simple implementation, we just
-// return success.
+// calls are made.  
 int my_init() {
   for (int i = 0; i < NUM_BUCKETS; i++) {
     free_lists[i] = NULL;
@@ -112,24 +90,25 @@ int get_bucket_size(size_t size) {
 //  malloc - Allocate a block by incrementing the brk pointer.
 //  Always allocate a block whose size is a multiple of the alignment.
 void * my_malloc(size_t size) {
-  /* add to free list with different size now! */
+  /* add to free list with different size */
   free_list_t** head = NULL;
   void *p = NULL;
   int bucket_idx = get_bucket_size(size);
-
+  printf("bucket index: %d",bucket_idx);
   if (free_lists[bucket_idx] != NULL) {
+    printf("taking from exact size bucket");
     head = &free_lists[bucket_idx];
     p = *head;
-    free_lists[bucket_idx] = (*head)->next;
-  } else {
+    *head = (*head)->next;
+  } //else {
     // Find an open bucket that is larger than the one we need
-    int open_bucket;
-    for (open_bucket = bucket_idx + 1; open_bucket <= NUM_BUCKETS; ++open_bucket) {
-      if (free_lists[open_bucket] != NULL) {
-        head = &free_lists[open_bucket];
-        break;
-      }
-    }
+    // int open_bucket;
+    // for (open_bucket = bucket_idx + 1; open_bucket <= NUM_BUCKETS; ++open_bucket) {
+    //   if (free_lists[open_bucket] != NULL) {
+    //     head = &free_lists[open_bucket];
+    //     break;
+    //   }
+    // }
     // if (head != NULL) {
     //   // We have a free bucket, but it's too big: subdivide it and assign p.
     //   p = *head;
@@ -139,7 +118,7 @@ void * my_malloc(size_t size) {
       // coalesce entries even if non-neighboring
       // coalesceEntries(size, p);
     //}
-  } 
+  //} 
 
   // If p still has not been assigned, we need new heap space. 
   // allocate a new item
