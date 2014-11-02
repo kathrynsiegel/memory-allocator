@@ -27,7 +27,7 @@
 
 // Called by the memory allocator when it needs to relocate
 // a potentially live object.  Can return NULL if old object is no longer needed.
-typedef void* (*relocate_callback_t)(void* state, void* old, void* new);
+// typedef void* (*relocate_callback_t)(void* state, void* old, void* new);
 
 /* Function pointers for a malloc implementation.  This is used to allow a
  * single validator to operate on both libc malloc, a buggy malloc, and the
@@ -44,7 +44,7 @@ typedef struct {
   void *(*heap_hi)(void);
 
    /* non-standard API */
-   void (*register_relocate_callback)(relocate_callback_t f, void* state);
+   // void (*register_relocate_callback)(relocate_callback_t f, void* state);
 
   char* name;
   char aligned;
@@ -164,7 +164,7 @@ int smart_check();
 void smart_reset_brk();
 void * smart_heap_lo();
 void * smart_heap_hi();
-void smart_register_relocate_callback(relocate_callback_t f, void* state);
+// void smart_register_relocate_callback(relocate_callback_t f, void* state);
 
 #define SMALL_SIZE 32
 #define LARGE_SIZE 64
@@ -180,12 +180,12 @@ void smart_register_relocate_callback(relocate_callback_t f, void* state);
 #define IS_SMALL(p) (((uint64_t)p)&1)
 #endif
 
-static const malloc_impl_t smart_impl =
-{ .name = "smart", .aligned = 1, .smart = 1,
-  .init = &smart_init, .malloc = &smart_malloc, .realloc = &smart_realloc,
-  .free = &smart_free, .check = &smart_check, .reset_brk = &smart_reset_brk,
-  .heap_lo = &smart_heap_lo, .heap_hi = &smart_heap_hi,
-  .register_relocate_callback = &smart_register_relocate_callback};
+// static const malloc_impl_t smart_impl =
+// { .name = "smart", .aligned = 1, .smart = 1,
+//   .init = &smart_init, .malloc = &smart_malloc, .realloc = &smart_realloc,
+//   .free = &smart_free, .check = &smart_check, .reset_brk = &smart_reset_brk,
+//   .heap_lo = &smart_heap_lo, .heap_hi = &smart_heap_hi,
+//   .register_relocate_callback = &smart_register_relocate_callback};
 
 #define FIXED_SIZE LARGE_SIZE
 int fixed_init();
