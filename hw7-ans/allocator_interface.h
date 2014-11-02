@@ -69,7 +69,6 @@ static const malloc_impl_t libc_impl =
 
 /* alignment helpers, alignment must be power of 2 */
 #define ALIGNED(x, alignment) ((((uint64_t)x) & ((alignment)-1)) == 0)
->>>>>>> 53ed867142ffeca0e92ca2dd17b1eeed3f46e50c
 #define ALIGN_FORWARD(x, alignment) \
     ((((uint64_t)x) + ((alignment)-1)) & (~((uint64_t)(alignment)-1)))
 #define ALIGN_BACKWARD(x, alignment) (((uint64_t)x) & (~((uint64_t)(alignment)-1)))
@@ -91,34 +90,6 @@ static const malloc_impl_t libc_impl =
 #define CACHE_ALIGNMENT 64
 #define CACHE_ALIGN(size) ALIGN_FORWARD(size, CACHE_ALIGNMENT)
 
-
-int my_init();
-void * my_malloc(size_t size);
-void * my_realloc(void *ptr, size_t size);
-void my_free(void *ptr);
-int my_check();
-void my_reset_brk();
-void * my_heap_lo();
-void * my_heap_hi();
-
-static const malloc_impl_t my_impl =
-{ .init = &my_init, .malloc = &my_malloc, .realloc = &my_realloc,
-  .free = &my_free, .check = &my_check, .reset_brk = &my_reset_brk,
-  .heap_lo = &my_heap_lo, .heap_hi = &my_heap_hi};
-
-int bad_init();
-void * bad_malloc(size_t size);
-void * bad_realloc(void *ptr, size_t size);
-void bad_free(void *ptr);
-int bad_check();
-void bad_reset_brk();
-void * bad_heap_lo();
-void * bad_heap_hi();
-
-static const malloc_impl_t bad_impl =
-{ .init = &bad_init, .malloc = &bad_malloc, .realloc = &bad_realloc,
-  .free = &bad_free, .check = &bad_check, .reset_brk = &bad_reset_brk,
-  .heap_lo = &bad_heap_lo, .heap_hi = &bad_heap_hi};
 int wrapped_init();
 void * wrapped_malloc(size_t size);
 void * wrapped_realloc(void *ptr, size_t size);
