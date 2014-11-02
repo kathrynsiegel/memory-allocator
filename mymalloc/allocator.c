@@ -54,9 +54,7 @@
 // } used_header_t;
 // #define HEADER_T_SIZE (ALLOC_ALIGN(sizeof(used_header_t)))
 
-typedef struct free_list_t {
-   struct free_list_t* next;
-} free_list_t;
+
 
 relocate_callback_t relocate_callback = NULL;
 void* relocate_state = NULL;
@@ -66,34 +64,16 @@ void smart_register_relocate_callback(relocate_callback_t f, void* state)
   relocate_state = state;
 }
 
-#define BUCKET_1 0x0
-#define BUCKET_2 0x1
-#define BUCKET_3 0x2
-#define BUCKET_4 0x3
-#define BUCKET_5 0x4
-#define BUCKET_6 0x5
-#define BUCKET_7 0x6
-#define LAST_BUCKET BUCKET_7
+#define MAX_SIZE_LOG_2 29
+#define MIN_SIZE_LOG_2 5
+#define NUM_BUCKETS MAX_SIZE_LOG_2 - MIN_SIZE_LOG_2
+#define SIZE_CACHE_LINE 64
 
 #define SIZE_PTR(p) (void*)(((uint64_t)p&~0xF))
-#define IS_SIZE32(p) ((uint8_t)(*(SIZE_PTR(p))) == BUCKET_1)
-#define IS_SIZE64(p) ((uint8_t)(*(SIZE_PTR(p))) == BUCKET_2)
-#define IS_SIZE128(p) ((uint8_t)(*(SIZE_PTR(p))) == BUCKET_3)
-#define IS_SIZE256(p) ((uint8_t)(*(SIZE_PTR(p))) == BUCKET_4)
-#define IS_SIZE512(p) ((uint8_t)(*(SIZE_PTR(p))) == BUCKET_5)
-#define IS_SIZE1024(p) ((uint8_t)(*(SIZE_PTR(p))) == BUCKET_6)
-#define IS_SIZE_BIG(p) ((uint8_t)(*(SIZE_PTR(p))) == BUCKET_7)
 
-#define SIZE_32 32
-#define SIZE_64 64
-#define SIZE_128 128
-#define SIZE_256 256
-#define SIZE_512 512
-#define SIZE_1024 1024
+#define BUCKET_SIZE(i) (1<<((i)+MIN_SIZE_LOG_2))
 
-static int BUCKET_SIZES[LAST_BUCKET];
-
-#define FITS_INTO_BUCKET(size, bucket_idx) ((size)-1 <= (BUCKET_SIZES[bucket_idx]))
+#define FITS_INTO_BUCKET(size, bucket_idx) ((size)-1 <= (BUCKET_SIZE(bucket_idx)))
 
 free_list_t *free_lists[];
 /*
@@ -112,16 +92,10 @@ int my_init() {
   for (int i = BUCKET_1; i <= BUCKET_7; i++) {
     free_lists[i] = NULL;
   }
-  /*
-  free_list32 = NULL;
-  free_list64 = NULL;
-  free_list128 = NULL;
-  free_list256 = NULL;
-  free_list512 = NULL;
-  free_list1024 = NULL;
-  */
 
-  BUCKET_SIZES = {32, 64, 128, 256, 512, 1024};
+  for (int i = 0; i < NUM_BUCKETS; i++) {
+    BUCKET_SIZE(i) = 1<<(5 + i);
+  }
 
   void *brk = mem_heap_hi() + 1;
   int req_size = CACHE_ALIGN(brk) - (uint64_t)brk;
@@ -132,21 +106,13 @@ int my_init() {
 }
 
 int get_bucket_size(size_t size) {
-  if (size < SIZE_32) {
-    return BUCKET_1;
-  } else if (size < SIZE_64) {
-    return BUCKET_2;
-  } else if (size < SIZE_128) {
-    return BUCKET_3;
-  } else if (size < SIZE_256) {
-    return BUCKET_4;
-  } else if (size < SIZE_512) {
-    return BUCKET_5;
-  } else if (size < SIZE_1024) {
-    return BUCKET_6;
-  } else {
-    return BUCKET_7;
+  int i = 0;
+  size >>= 5;
+  while (size) {
+    i++;
+    size >>= 1;
   }
+  return i;
 }
 
 //  malloc - Allocate a block by incrementing the brk pointer.
@@ -165,7 +131,7 @@ void * my_malloc(size_t size) {
   } else {
     // Find an open bucket that is larger than the one we need
     int open_bucket;
-    for (open_bucket = bucket_idx; open_bucket <= LAST_BUCKET; ++open_bucket) {
+    for (open_bucket = bucket_idx; open_bucket <= NUM_BUCKETS; ++open_bucket) {
       if (free_lists[open_bucket] != NULL) {
         head = &free_lists[open_bucket];
         break;
@@ -188,30 +154,6 @@ void * my_malloc(size_t size) {
     p = alloc_aligned(size);
   }
 
-  /*
-  if (size < SIZE_32) {
-    head = &free_list32;
-    bucket = BUCKET_1;
-  } else if (size < SIZE_64) {
-    head = &free_list64;
-    bucket = BUCKET_2;
-  } else if (size < SIZE_128) {
-    head = &free_list128;
-    bucket = BUCKET_3;
-  } else if (size < SIZE_256) {
-    head = &free_list256;
-    bucket = BUCKET_4;
-  } else if (size < SIZE_512) {
-    head = &free_list512;
-    bucket = BUCKET_5;
-  } else if (size < SIZE_1024) {
-    head = &free_list1024;
-    bucket = BUCKET_6;
-  } else {
-    bucket = BUCKET_7;
-  }
-  */
-
   if (p == (void *)-1) {
     // Whoops, an error of some sort occurred.  We return NULL to let
     // the client code know that we weren't able to allocate memory.
@@ -225,8 +167,7 @@ void * my_malloc(size_t size) {
 
   // then fill that byte with info containing size
   void * sizeptr = SIZE_PTR(p);
-  uint8_t size = (uint8_t)(*sizeptr);
-  size = bucket;
+  *sizeptr = (uint8_t)bucket;
 
   return p;
 }
@@ -237,53 +178,27 @@ void * my_malloc(size_t size) {
  * bucket. Recurses until there exists a bucket larger than size, and stores 
  * the address of the bucket in p.
  */
-bool coalesceEntries(size_t size, void* p) {
+int coalesceEntries(size_t size, void* p) {
   free_list_t* cur_free_list;
   size_t large_size;
   size_t small_size;
   // check if we can coalesce two smaller entries
   if (relocate_callback) {
-    bool can_coalesce = false;
+    int can_coalesce = 0;
 
-    for (int i = LAST_BUCKET-2; i > BUCKET_1; i--) {
-      if (size < BUCKET_SIZES[i+1] && free_lists[i] && free_lists[i]->next) {
+    for (int i = NUM_BUCKETS-2; i > BUCKET_1; i--) {
+      if (size < BUCKET_SIZE(i+1) && free_lists[i] && free_lists[i]->next) {
         cur_free_list = free_lists[i];
-        large_size = BUCKET_SIZES[i+1];
-        small_size = BUCKET_SIZES[i];
-        can_coalesce = true;
+        large_size = BUCKET_SIZE(i+1);
+        small_size = BUCKET_SIZE(i);
+        can_coalesce = 1;
       }
     }
 
-    /*
-    if (size < SIZE_64 && free_list32 && free_list32->next) {
-      cur_free_list = free_list32;
-      large_size = SIZE_64;
-      small_size = SIZE_32;
-    } else if (size < SIZE_128 && free_list64 && free_list64->next) {
-      cur_free_list = free_list64;
-      large_size = SIZE_128;
-      small_size = SIZE_64;
-    } else if (size < SIZE_256 && free_list128 && free_list128->next) {
-      cur_free_list = free_list128;
-      large_size = SIZE_256;
-      small_size = SIZE_128;
-    } else if (size < SIZE_512 && free_list256 && free_list256->next) {
-      cur_free_list = free_list256
-      large_size = SIZE_512
-      small_size = SIZE_256; 
-    } else if (size < SIZE_1024) {
-      cur_free_list = free_list512;
-      large_size = SIZE_1024;
-      small_size = SIZE_512
-    } else { // TODO(larger) 
-      can_coalesce = false;
-    }
-    */
-
     // two entries are available in a smaller list: force them to merge
     if (can_coalesce) {
-      p1 = cur_free_list;
-      p2 = p1->next;
+      free_list_t* p1 = cur_free_list;
+      free_list_t* p2 = p1->next;
 
       /* find which one is smaller of p1 and p2,
        * use smallest to ensure its not beyond the end of brk */
@@ -315,7 +230,7 @@ bool coalesceEntries(size_t size, void* p) {
       // Having reallocated, return TRUE if there is now a bucket large enough
       // to hold SIZE.
       if (large_size > size) {
-        return true;
+        return 1;
       } 
       // Recurse otherwise.
       coalesceEntries(size, p);
@@ -323,7 +238,7 @@ bool coalesceEntries(size_t size, void* p) {
   }
 
   // We failed to coalesce.
-  return false;
+  return 0;
 }
 
 /*
@@ -335,8 +250,9 @@ bool coalesceEntries(size_t size, void* p) {
  * bucketp: pointer to the start of the bucket
  */
 void * subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
-  // make sure it's actually too big.
-  if (!FITS_INTO_BUCKET(size, bucket_idx)) {
+  // Handle when bucket size > 1024
+ if (!FITS_INTO_BUCKET(size, bucket_idx)) {
+    // make sure it's actually too big.
     printf("ERROR! subdivideBucket called with too small bucket!!");
     return;
   } else if (bucket_idx == BUCKET_1 || !FITS_INTO_BUCKET(size, bucket_idx-1)) {
@@ -347,9 +263,9 @@ void * subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
   // stealing this chunk of memory
   free_lists[bucket_idx] = head->next;
   // our new size is smaller
-  new_bucket_size = BUCKET_SIZES[bucket_idx-1];
+  size_t new_bucket_size = BUCKET_SIZE(bucket_idx-1);
   // make room for the new bucket
-  new_bucket = (free_list_t*)(head + new_bucket_size);
+  free_list_t* new_bucket = (free_list_t*)(head + new_bucket_size);
   // put the first smaller bucket on the stack
   new_bucket->next = free_lists[bucket_idx-1];
   free_lists[bucket_idx-1] = new_bucket;
@@ -369,26 +285,18 @@ void * subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
 
 void * alloc_aligned(size_t size) {
   // TODO: this
-  if (size < SIZE_32) {
-    size = SIZE_32;
-  } if (size < SIZE_64) {
+  for (int i = 0; i < NUM_BUCKETS; i++) {
+    if (FITS_INTO_BUCKET(size, i))
+      size = BUCKET_SIZE(i);
+  }
+  if (size < SIZE_CACHE_LINE) {
     void *brk = mem_heap_hi() + 1;
-    if (!ALIGNED(brk, SIZE_64)) {
-       free_list_t *small = mem_sbrk(SIZE_32);
-       small->next = free_list32;
-       free_list32 = small;
+    if (!ALIGNED(brk, SIZE_CACHE_LINE)) {
+       free_list_t *small = mem_sbrk(SIZE_CACHE_LINE/2);
+       small->next = free_lists[0];
+       free_lists[0] = small;
     }
-    size = SIZE_64;
-  } else if (size < SIZE_128 && free_list64 && free_list64->next) {
-    size = SIZE_128; 
-  } else if (size < SIZE_256 && free_list128 && free_list128->next) {
-    size = SIZE_256;
-  } else if (size < SIZE_512 && free_list256 && free_list256->next) {
-    size = SIZE_512;
-  } else if (size < SIZE_1024) {
-    size = SIZE_1024;
-  } //else { // TODO(larger) 
-  // }
+  }
 
   // align if needed
   void *brk = mem_heap_hi() + 1;
@@ -414,37 +322,11 @@ void my_free(void *ptr) {
     return;
   }
   /* add to free list with different size now! */
-  free_list_t** head;
-  // printf("smart_free %ld -> %p\n", IS_SMALL(p) ? 32 : 64, p);
-
-  void * sizeptr = SIZE_PTR(p);
-  uint8_t bucket = (uint8_t)(*sizeptr);
-  switch (bucket) {
-    case BUCKET_1:
-      head = &free_list32;
-      break;
-    case BUCKET_2:
-      head = &free_list64;
-      break;
-    case BUCKET_3:
-      head = &free_list128;
-      break;
-    case BUCKET_4:
-      head = &free_list256;
-      break;
-    case BUCKET_5:
-      head = &free_list512;
-      break;
-    case BUCKET_6:
-      head = &free_list1024;
-      break;
-    default:
-      subdivideBucket(SIZE_1024, ptr);
-      head = &free_list1024;
-      break;
-  }
-
+  void * sizeptr = SIZE_PTR(ptr);
+  uint8_t bucket = *sizeptr;
+  free_list_t** head = &free_lists[bucket];
   free_list_t* fn = sizeptr;
+
   fn->next = *head;
   *head = fn;
 }

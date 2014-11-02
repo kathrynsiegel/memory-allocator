@@ -90,9 +90,16 @@ static const malloc_impl_t libc_impl =
 #define CACHE_ALIGNMENT 64
 #define CACHE_ALIGN(size) ALIGN_FORWARD(size, CACHE_ALIGNMENT)
 
+typedef struct free_list_t {
+   struct free_list_t* next;
+} free_list_t;
 
 int my_init();
+int get_bucket_size(size_t size);
 void * my_malloc(size_t size);
+int coalesceEntries(size_t size, void* p);
+void * subdivideBucket(size_t size, int bucket_idx, free_list_t* head);
+void * alloc_aligned(size_t size);
 void * my_realloc(void *ptr, size_t size);
 void my_free(void *ptr);
 int my_check();
