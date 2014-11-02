@@ -91,10 +91,6 @@ int my_init() {
     free_lists[i] = NULL;
   }
 
-  // for (int i = 0; i < NUM_BUCKETS; i++) {
-  //   BUCKET_SIZE(i) = 1<<(5 + i);
-  // }
-
   void *brk = mem_heap_hi() + 1;
   int req_size = CACHE_ALIGN(brk) - (uint64_t)brk;
   mem_sbrk(req_size);
@@ -124,7 +120,7 @@ void * my_malloc(size_t size) {
   if (free_lists[bucket_idx] != NULL) {
     head = &free_lists[bucket_idx];
     p = *head;
-    *head = (*head)->next;
+    free_lists[bucket_idx] = (*head)->next;
   } else {
     // Find an open bucket that is larger than the one we need
     int open_bucket;
