@@ -58,7 +58,10 @@ static const malloc_impl_t libc_impl =
   .heap_lo = &libc_heap_lo, .heap_hi = &libc_heap_hi};
 
 /* alignment helpers, alignment must be power of 2 */
-#define ALIGNED(x, alignment) ((((uint64_t)x) & ((alignment)-1)) == 0)
+
+#define ALIGNED(x, alignment) ((((uint64_t)x) & (alignment-1)) == 0)
+
+
 #define ALIGN_FORWARD(x, alignment) \
     ((((uint64_t)x) + ((alignment)-1)) & (~((uint64_t)(alignment)-1)))
 #define ALIGN_BACKWARD(x, alignment) (((uint64_t)x) & (~((uint64_t)(alignment)-1)))

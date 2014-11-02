@@ -1,3 +1,0 @@
-[2014-10-22 13:16:50,201] WARNING opentuner.search.driver: Result callback 2 (requestor=RandomNelderMead) pending for 1 generations 1 results available @driver.py:99
-[2014-10-22 13:16:50,203] WARNING opentuner.search.driver: Result callback 3 (requestor=RandomNelderMead) pending for 1 generations 1 results available @driver.py:99
-[2014-10-22 13:16:54,312]    INFO opentuner.search.plugin.DisplayPlugin: tests=1, best {'ALIGNMENT': 8}, cost time=0.0185, accuracy=61.6984, found by DifferentialEvolutionAlt,DifferentialEvolutionA... @plugin.py:102
