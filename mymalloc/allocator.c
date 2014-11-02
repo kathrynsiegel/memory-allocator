@@ -75,7 +75,7 @@ void smart_register_relocate_callback(relocate_callback_t f, void* state)
 
 #define FITS_INTO_BUCKET(size, bucket_idx) ((size)-1 <= (BUCKET_SIZE(bucket_idx)))
 
-free_list_t *free_lists[];
+free_list_t *free_lists[NUM_BUCKETS];
 /*
 free_list_t *free_list32;
 free_list_t *free_list64;
@@ -89,7 +89,7 @@ free_list_t *free_list1024;
 // calls are made.  Since this is a very simple implementation, we just
 // return success.
 int my_init() {
-  for (int i = BUCKET_1; i <= BUCKET_7; i++) {
+  for (int i = 0; i < NUM_BUCKETS; i++) {
     free_lists[i] = NULL;
   }
 
