@@ -225,17 +225,23 @@ void * my_malloc(size_t size) {
   return p;
 }
 
+/*
+ * Takes a size which it needs to allocate to pointer p.
+ * Moves two smaller buckets next to each other and makes them into a larger
+ * bucket. Recurses until there exists a bucket larger than size, and stores 
+ * the address of the bucket in p.
+ */
 void * coalesceEntries(size_t size, void* p) {
-  free_list_t* curr_free_list;
+  free_list_t* cur_free_list;
   size_t large_size;
   size_t small_size;
   // check if we can coalesce two smaller entries
   if (relocate_callback) {
     bool can_coalesce = false;
 
-    for (int i = BUCKET_1; i < LAST_BUCKET-1; i++) {
+    for (int i = LAST_BUCKET-2; i > BUCKET_1; i--) {
       if (size < BUCKET_SIZES[i+1] && free_lists[i] && free_lists[i]->next) {
-        curr_free_list = free_lists[i];
+        cur_free_list = free_lists[i];
         large_size = BUCKET_SIZES[i+1];
         small_size = BUCKET_SIZES[i];
         can_coalesce = true;
@@ -244,23 +250,23 @@ void * coalesceEntries(size_t size, void* p) {
 
     /*
     if (size < SIZE_64 && free_list32 && free_list32->next) {
-      curr_free_list = free_list32;
+      cur_free_list = free_list32;
       large_size = SIZE_64;
       small_size = SIZE_32;
     } else if (size < SIZE_128 && free_list64 && free_list64->next) {
-      curr_free_list = free_list64;
+      cur_free_list = free_list64;
       large_size = SIZE_128;
       small_size = SIZE_64;
     } else if (size < SIZE_256 && free_list128 && free_list128->next) {
-      curr_free_list = free_list128;
+      cur_free_list = free_list128;
       large_size = SIZE_256;
       small_size = SIZE_128;
     } else if (size < SIZE_512 && free_list256 && free_list256->next) {
-      curr_free_list = free_list256
+      cur_free_list = free_list256
       large_size = SIZE_512
       small_size = SIZE_256; 
     } else if (size < SIZE_1024) {
-      curr_free_list = free_list512;
+      cur_free_list = free_list512;
       large_size = SIZE_1024;
       small_size = SIZE_512
     } else { // TODO(larger) 
@@ -271,16 +277,16 @@ void * coalesceEntries(size_t size, void* p) {
     if (can_coalesce) {
       /* two entries available in small list */
       /* force them to merge */
-      p1 = curr_free_list;
+      p1 = cur_free_list;
       p2 = p1->next;
       /* find which one is smaller of p1 and p2,
       * use smallest to ensure its not beyond the end of brk */
       if (p1 > p2) {
         p1 = p2;
-        p2 = curr_free_list;
+        p2 = cur_free_list;
       }
       // Remove the two buckets from the free list
-      curr_free_list = curr_free_list->next->next;
+      cur_free_list = cur_free_list->next->next;
 
       /* find the alternate, potentially live element */
       if (ALIGNED(p1, large_size)) {
@@ -305,7 +311,7 @@ void * coalesceEntries(size_t size, void* p) {
 }
 
 void * subdivideBucket(size_t size, void* p) {
-  free_list_t* curr_free_list;
+  free_list_t* cur_free_list;
   size_t large_size;
   size_t small_size;
   // check if we can coalesce two smaller entries
@@ -314,7 +320,7 @@ void * subdivideBucket(size_t size, void* p) {
 
     for (int i = BUCKET_1; i < LAST_BUCKET-1; i++) {
       if (size < BUCKET_SIZES[i+1] && free_lists[i] && free_lists[i]->next) {
-        curr_free_list = free_lists[i];
+        cur_free_list = free_lists[i];
         large_size = BUCKET_SIZES[i+1];
         small_size = BUCKET_SIZES[i];
         can_coalesce = true;
@@ -323,23 +329,23 @@ void * subdivideBucket(size_t size, void* p) {
 
     /*
     if (size < SIZE_64 && free_list32 && free_list32->next) {
-      curr_free_list = free_list32;
+      cur_free_list = free_list32;
       large_size = SIZE_64;
       small_size = SIZE_32;
     } else if (size < SIZE_128 && free_list64 && free_list64->next) {
-      curr_free_list = free_list64;
+      cur_free_list = free_list64;
       large_size = SIZE_128;
       small_size = SIZE_64;
     } else if (size < SIZE_256 && free_list128 && free_list128->next) {
-      curr_free_list = free_list128;
+      cur_free_list = free_list128;
       large_size = SIZE_256;
       small_size = SIZE_128;
     } else if (size < SIZE_512 && free_list256 && free_list256->next) {
-      curr_free_list = free_list256
+      cur_free_list = free_list256
       large_size = SIZE_512
       small_size = SIZE_256; 
     } else if (size < SIZE_1024) {
-      curr_free_list = free_list512;
+      cur_free_list = free_list512;
       large_size = SIZE_1024;
       small_size = SIZE_512
     } else { // TODO(larger) 
@@ -350,16 +356,16 @@ void * subdivideBucket(size_t size, void* p) {
     if (can_coalesce) {
       /* two entries available in small list */
       /* force them to merge */
-      p1 = curr_free_list;
+      p1 = cur_free_list;
       p2 = p1->next;
       /* find which one is smaller of p1 and p2,
       * use smallest to ensure its not beyond the end of brk */
       if (p1 > p2) {
         p1 = p2;
-        p2 = curr_free_list;
+        p2 = cur_free_list;
       }
       // Remove the two buckets from the free list
-      curr_free_list = curr_free_list->next->next;
+      cur_free_list = cur_free_list->next->next;
 
       /* find the alternate, potentially live element */
       if (ALIGNED(p1, large_size)) {
