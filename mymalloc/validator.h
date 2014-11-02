@@ -49,8 +49,8 @@ typedef struct range_t {
 // we create a range struct for this block and add it to the range list.
 static int add_range(const malloc_impl_t *impl, range_t **ranges, char *lo,
     int size, int tracenum, int opnum) {
-  char *hi = lo + size - 1;
-  range_t *p = NULL;
+  //  char *hi = lo + size - 1;
+  //  range_t *p = NULL;
 
   // You can use this as a buffer for writing messages with sprintf.
   // char msg[MAXLINE];
@@ -58,31 +58,17 @@ static int add_range(const malloc_impl_t *impl, range_t **ranges, char *lo,
   assert(size > 0);
 
   // Payload addresses must be R_ALIGNMENT-byte aligned
-  if (!IS_ALIGNED(lo) || !IS_ALIGNED(hi))
-    malloc_error(tracenum, 0, "impl init failed.");
+  // TODO(project3): YOUR CODE HERE
 
   // The payload must lie within the extent of the heap
-  if (lo < (char*)mem_heap_lo() || hi > (char*)mem_heap_hi())
-    malloc_error(tracenum, 0, "impl init failed.");
+  // TODO(project3): YOUR CODE HERE
 
   // The payload must not overlap any other payloads
-  p = NULL;
-  range_t *pnext;
-  for (p = *ranges; p != NULL; p = pnext) {
-    if ((p->lo <= hi && p->hi >= hi) || (p-> lo <= lo && p->hi >= lo)) {
-      malloc_error(tracenum, 0, "impl init failed.");
-    }
-
-    pnext = p->next;
-  }
+  // TODO(project3): YOUR CODE HERE
 
   // Everything looks OK, so remember the extent of this block by creating a
   // range struct and adding it the range list.
-  range_t *range = malloc(sizeof(range_t));
-  range->lo = lo;
-  range->hi = hi;
-  range->next = *ranges;
-  ranges = &range;
+  // TODO(project3):  YOUR CODE HERE
 
   return 1;
 }
@@ -90,25 +76,12 @@ static int add_range(const malloc_impl_t *impl, range_t **ranges, char *lo,
 // remove_range - Free the range record of block whose payload starts at lo
 static void remove_range(range_t **ranges, char *lo) {
   //  range_t *p = NULL;
-  range_t *p = NULL;
-  range_t *prevpp = *ranges;
-
-  // Handle the case where the list head has the payload
-  if (prevpp->lo == lo) {
-    ranges = &prevpp->next;
-    free(prevpp);
-    return;
-  }
+  //  range_t **prevpp = ranges;
 
   // Iterate the linked list until you find the range with a matching lo
   // payload and remove it.  Remember to properly handle the case where the
   // payload is in the first node, and to free the node after unlinking it.
-  for (p = prevpp; p->lo != lo; prevpp = p) {
-    p = prevpp->next;
-  }
-  // p is now pointing to the range with the payload. Cut it out of the loop.
-  prevpp->next = p->next;
-  free(p);
+  // TODO(project3): YOUR CODE HERE
 }
 
 // clear_ranges - free all of the range records for a trace
@@ -158,18 +131,14 @@ int eval_mm_valid(const malloc_impl_t *impl, trace_t *trace, int tracenum) {
         }
 
         // Test the range of the new block for correctness and add it
-        // to the range list if OK. The block must be aligned properly,
+        // to the range list if OK. The block must be  be aligned properly,
         // and must not overlap any currently allocated block.
         if (add_range(impl, &ranges, p, size, tracenum, i) == 0)
           return 0;
 
         // Fill the allocated region with some unique data that you can check
         // for if the region is copied via realloc.
-        // (project 3)
-        // Just a sequence of numbers, starting at 0.
-        for (int j = 0; j < size; j++) {
-          trace->blocks[index][j] = j;
-        }
+        // TODO(project3): YOUR CODE HERE
 
         // Remember region
         trace->blocks[index] = p;
@@ -198,20 +167,7 @@ int eval_mm_valid(const malloc_impl_t *impl, trace_t *trace, int tracenum) {
         oldsize = trace->block_sizes[index];
         if (size < oldsize)
           oldsize = size;
-        
-        // (project3)
-        // Check that the new block contains the data from the new block, then
-        // fill the new extra space with stuff.
-        for (int j = 0; j < size; j++) {
-          if (j < oldsize && trace->blocks[index][j] != j) {
-            printf("impl realloc failed: data at location %x[%d] "
-                  "has been corrupted. New value: %x (%d)",
-                  trace->blocks[index], j, trace->blocks[index][j],
-                  (int)trace->blocks[index][j]);
-            malloc_error(tracenum, i, "bloop"); 
-          }
-          trace->blocks[index][j] = j;
-        }
+        // TODO(project3): YOUR CODE HERE
 
         // Remember region
         trace->blocks[index] = newp;

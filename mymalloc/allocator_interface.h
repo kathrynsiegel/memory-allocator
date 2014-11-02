@@ -98,7 +98,7 @@ int my_init();
 int get_bucket_size(size_t size);
 void * my_malloc(size_t size);
 int coalesceEntries(size_t size, void* p);
-void * subdivideBucket(size_t size, int bucket_idx, free_list_t* head);
+void subdivideBucket(size_t size, int bucket_idx, free_list_t* head);
 void * alloc_aligned(size_t size);
 void * my_realloc(void *ptr, size_t size);
 void my_free(void *ptr);
@@ -125,35 +125,35 @@ static const malloc_impl_t bad_impl =
 { .init = &bad_init, .malloc = &bad_malloc, .realloc = &bad_realloc,
   .free = &bad_free, .check = &bad_check, .reset_brk = &bad_reset_brk,
   .heap_lo = &bad_heap_lo, .heap_hi = &bad_heap_hi};
-int wrapped_init();
-void * wrapped_malloc(size_t size);
-void * wrapped_realloc(void *ptr, size_t size);
-void wrapped_free(void *ptr);
-int wrapped_check();
-void wrapped_reset_brk();
-void * wrapped_heap_lo();
-void * wrapped_heap_hi();
+// int wrapped_init();
+// void * wrapped_malloc(size_t size);
+// void * wrapped_realloc(void *ptr, size_t size);
+// void wrapped_free(void *ptr);
+// int wrapped_check();
+// void wrapped_reset_brk();
+// void * wrapped_heap_lo();
+// void * wrapped_heap_hi();
 
-static const malloc_impl_t wrapped_impl =
-{ .name = "wrapped", .aligned = 1,
-  .init = &wrapped_init, .malloc = &wrapped_malloc, .realloc = &wrapped_realloc,
-  .free = &wrapped_free, .check = &wrapped_check, .reset_brk = &wrapped_reset_brk,
-  .heap_lo = &wrapped_heap_lo, .heap_hi = &wrapped_heap_hi};
+// static const malloc_impl_t wrapped_impl =
+// { .name = "wrapped", .aligned = 1,
+//   .init = &wrapped_init, .malloc = &wrapped_malloc, .realloc = &wrapped_realloc,
+//   .free = &wrapped_free, .check = &wrapped_check, .reset_brk = &wrapped_reset_brk,
+//   .heap_lo = &wrapped_heap_lo, .heap_hi = &wrapped_heap_hi};
 
-int aligned_init();
-void * aligned_malloc(size_t size);
-void * aligned_realloc(void *ptr, size_t size);
-void aligned_free(void *ptr);
-int aligned_check();
-void aligned_reset_brk();
-void * aligned_heap_lo();
-void * aligned_heap_hi();
+// int aligned_init();
+// void * aligned_malloc(size_t size);
+// void * aligned_realloc(void *ptr, size_t size);
+// void aligned_free(void *ptr);
+// int aligned_check();
+// void aligned_reset_brk();
+// void * aligned_heap_lo();
+// void * aligned_heap_hi();
 
-static const malloc_impl_t aligned_impl =
-{ .name = "aligned", .aligned = 1,
-  .init = &aligned_init, .malloc = &aligned_malloc, .realloc = &aligned_realloc,
-  .free = &aligned_free, .check = &aligned_check, .reset_brk = &aligned_reset_brk,
-  .heap_lo = &aligned_heap_lo, .heap_hi = &aligned_heap_hi};
+// static const malloc_impl_t aligned_impl =
+// { .name = "aligned", .aligned = 1,
+//   .init = &aligned_init, .malloc = &aligned_malloc, .realloc = &aligned_realloc,
+//   .free = &aligned_free, .check = &aligned_check, .reset_brk = &aligned_reset_brk,
+//   .heap_lo = &aligned_heap_lo, .heap_hi = &aligned_heap_hi};
 
 
 int smart_init();
@@ -187,20 +187,20 @@ void * smart_heap_hi();
 //   .heap_lo = &smart_heap_lo, .heap_hi = &smart_heap_hi,
 //   .register_relocate_callback = &smart_register_relocate_callback};
 
-#define FIXED_SIZE LARGE_SIZE
-int fixed_init();
-void * fixed_malloc(size_t size);
-void * fixed_realloc(void *ptr, size_t size);
-void fixed_free(void *ptr);
-int fixed_check();
-void fixed_reset_brk();
-void * fixed_heap_lo();
-void * fixed_heap_hi();
+// #define FIXED_SIZE LARGE_SIZE
+// int fixed_init();
+// void * fixed_malloc(size_t size);
+// void * fixed_realloc(void *ptr, size_t size);
+// void fixed_free(void *ptr);
+// int fixed_check();
+// void fixed_reset_brk();
+// void * fixed_heap_lo();
+// void * fixed_heap_hi();
 
-static const malloc_impl_t fixed_impl =
-{ .name = "fixed", .aligned = 1,
-  .init = &fixed_init, .malloc = &fixed_malloc, .realloc = &fixed_realloc,
-  .free = &fixed_free, .check = &fixed_check, .reset_brk = &fixed_reset_brk,
-  .heap_lo = &fixed_heap_lo, .heap_hi = &fixed_heap_hi};
+// static const malloc_impl_t fixed_impl =
+// { .name = "fixed", .aligned = 1,
+//   .init = &fixed_init, .malloc = &fixed_malloc, .realloc = &fixed_realloc,
+//   .free = &fixed_free, .check = &fixed_check, .reset_brk = &fixed_reset_brk,
+//   .heap_lo = &fixed_heap_lo, .heap_hi = &fixed_heap_hi};
 
 #endif  // _ALLOCATOR_INTERFACE_H
