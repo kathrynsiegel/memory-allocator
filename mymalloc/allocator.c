@@ -48,25 +48,26 @@
 
 // The smallest aligned size that will hold a size_t value.
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
+#define HEADER_SIZE SIZE_T_SIZE
 #define MAX_SIZE_LOG_2 29
 #define MIN_SIZE_LOG_2 5
 #define NUM_BUCKETS MAX_SIZE_LOG_2 - MIN_SIZE_LOG_2
 #define SIZE_CACHE_LINE 64
-#define BUCKET_SIZE(i) (1<<((i)+MIN_SIZE_LOG_2))
-#define FITS_INTO_BUCKET(size, bucket_idx) ((size) <= (BUCKET_SIZE(bucket_idx)-8))
+#define BUCKET_SIZE(i) ((1 << ((i) + MIN_SIZE_LOG_2)) - (HEADER_SIZE))
+#define FITS_INTO_BUCKET(size, bucket_idx) ((size) <= (BUCKET_SIZE(bucket_idx)))
 
 
 // the linked list data structure that holds the blocks we want to free
 typedef struct free_list_t {
   unsigned int bucket_num: 30;
-  unsigned int prev_bucket_idx: 30;
+  unsigned int prev_bucket_num: 30;
   unsigned int is_free: 2;
   struct free_list_t* next;
 } free_list_t;
 
 int get_bucket_size(size_t size);
 void coalesceEntries(free_list_t* list);
-void subdivideBucket(size_t size, int bucket_idx, free_list_t* head);
+void subdivideBucket(size_t size, free_list_t* head);
 void * alloc_aligned(int bucket_idx);
 void coalesceHelper(free_list_t* list_a, free_list_t* list_b);
 
@@ -93,7 +94,7 @@ int my_init() {
 // Note that we leave room for an 8 byte header.
 int get_bucket_size(size_t size) {
   int i = 0;
-  size += 8; // room for 8 byte header
+  size += HEADER_SIZE - 1; // room for 8 byte header
   size >>= 5;
   while (size) {
     i++;
@@ -106,47 +107,102 @@ int get_bucket_size(size_t size) {
 //  Always allocate a block whose size is a multiple of the alignment.
 void * my_malloc(size_t size) {
   /* add to free list with different size */
-  free_list_t** head = NULL;
   void *p = NULL;
   int bucket_idx = get_bucket_size(size);
+  
   if (free_lists[bucket_idx] != NULL) {
-    head = &free_lists[bucket_idx];
-    p = *head;
+    // If there is a bucket of exactly the right size available, we're good
+    p = free_lists[bucket_idx];
     free_lists[bucket_idx] = free_lists[bucket_idx]->next;
+
   } else {
+    
     // Find an open bucket that is larger than the one we need
     int open_bucket;
-    for (open_bucket = bucket_idx + 1; open_bucket <= NUM_BUCKETS; ++open_bucket) {
+    for (open_bucket = bucket_idx + 1; open_bucket < NUM_BUCKETS; ++open_bucket) {
       if (free_lists[open_bucket] != NULL) {
-        head = &free_lists[open_bucket];
-        // We have a free bucket, but it's too big: subdivide it and assign p.
-        p = *head;
-        subdivideBucket(size, open_bucket, *head);
         break;
       }
     }
+
+    // If we have a free bucket, but it's too big, subdivide it and assign p.
+    if (open_bucket < NUM_BUCKETS) {
+      // split a larger bucket into appropriately-sized chunks
+      subdivideBucket(size, free_lists[open_bucket]);
+
+      // there should now be a bucket of the right size: assign p.
+      p = free_lists[bucket_idx];
+      free_lists[bucket_idx] = free_lists[bucket_idx]->next;
+      
+      // something went wrong if P is null
+      if (p == NULL)
+        return NULL;
+    }
   } 
 
+  free_list_t* new_list;
+
   // If p still has not been assigned, we need new heap space. 
-  // allocate a new item
-  if (!p) {
+  if (p) {
+    if (p == (void *)-1) {
+      // an error occurred, and we couldn't allocate memory.
+      return NULL;
+    }
+
+    // p is first cast to a free_list_t* in order to store metadata
+    new_list = (free_list_t*)p;
+
+  } else {
+    // allocate a new item.
     p = alloc_aligned(bucket_idx);
+
+    // TODO: maybe do this inside alloc_aligned?
+    new_list = (free_list_t*)p;
+
+    if (heap_top != NULL) {
+      new_list->prev_bucket_num = heap_top->bucket_num;
+    }
   }
 
-  if (p == (void *)-1) {
-    // Whoops, an error of some sort occurred.  We return NULL to let
-    // the client code know that we weren't able to allocate memory.
-    return NULL;
-  }
+  // fill header info and increment the pointer by HEADER_SIZE
+  // we made a free_list, but don't use it like a free_list: the cast is strictly to
+  // align the header in the right place.
+  new_list->bucket_num = bucket_idx;  // set size
+  new_list->is_free = 0;  // in use
+  return (void*)((char*)p + HEADER_SIZE);
+}
 
-  // fill header info and increment pointer by 8 bytes
-  free_list_t* new_list = (free_list_t*)p;
-  new_list->bucket_num = bucket_idx;
-  new_list->is_free = 0;
-  if (heap_top != NULL) {
-    new_list->prev_bucket_idx = heap_top->bucket_num;
+/* 
+ * Remove a bucket from a linked list, using the power of O(n) search.
+ * TODO: A doubly-linked free list would be immensely helpful
+ */
+void removeFromFreeList(free_list_t* bucket, free_list_t** list) {
+  if (bucket == *list) {
+    // if this bucket is at the head of its list, great!
+    *list = (*list)->next;
+    return;
   }
-  return p+SIZE_T_SIZE;
+  printf("attempting to find bucket to remove...\n");
+
+  // otherwise we have to iterate through everything...
+  free_list_t* prev = *list;
+  while (prev != NULL && prev->next != bucket) {
+    printf("Bucket %p \n", prev);
+    // if we hit the end of the list, something is wrong.
+    if (prev->next == NULL) {
+      printf("Error: bucket %p not found in list %p.\n", bucket, list);
+      return;
+    }
+    prev = prev->next;
+  }
+  
+  // cut BUCKET out from the LL, but leave the LIST head untouched.
+  if (prev != NULL) {
+    printf("FOUND!!!!\n");
+    prev->next = bucket->next;
+  } else {
+    printf("ERROR\n");
+  }
 }
 
 /*
@@ -154,64 +210,91 @@ void * my_malloc(size_t size) {
  * Recursive: only divides bucket in half at any level.
  * 
  * size: the size of the object we need to fit
- * bucket_idx: the index of the smallest bucket we can find
- * bucketp: pointer to the start of the bucket
+ * head: the big bucket to divide
  */
-void subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
-  // Advance the pointer of the relevant free list, to let it know we're
-  // stealing this chunk of memory
-  head = free_lists[bucket_idx];
-  free_lists[bucket_idx] = free_lists[bucket_idx]->next;
-  // our new size is smaller
-  size_t new_bucket_size = BUCKET_SIZE(bucket_idx-1);
-  // make room for the new bucket
-  free_list_t* new_bucket = (free_list_t*)((char*)head + new_bucket_size);
-  // set fields for the new bucket
-  new_bucket->bucket_num = bucket_idx-1;
-  new_bucket->prev_bucket_idx = bucket_idx-1;
-  new_bucket->is_free = 0x1;
-  // set fields for the bucket after this new bucket
-  free_list_t* bucket_after = (free_list_t*)((char*)head + BUCKET_SIZE(bucket_idx));
-  bucket_after->prev_bucket_idx = bucket_idx-1;
+void subdivideBucket(size_t size, free_list_t* head) {
+  int big_bucket_i = head->bucket_num;
+  int small_bucket_i = big_bucket_i - 1;
+  
+  // cut out HEAD from its free list
+  removeFromFreeList(head, &free_lists[big_bucket_i]);
+
+  // make room for the first new bucket: jump forward in memory by the total required 
+  // size (including the header)
+  free_list_t* new_bucket = (free_list_t*)((char*)head + 
+      BUCKET_SIZE(small_bucket_i));// + HEADER_SIZE);
+
+  // set fields for the first new bucket
+  new_bucket->bucket_num = small_bucket_i;
+  new_bucket->prev_bucket_num = small_bucket_i;
+  new_bucket->is_free = 0x1;  // free = true
+
+  // find the bucket after this new bucket
+  if (head == heap_top) {
+    printf("subdivide end");
+    heap_top->prev_bucket_num = small_bucket_i;
+  } else {
+    free_list_t* bucket_after = (free_list_t*)((char*)head + 
+      BUCKET_SIZE(big_bucket_i));// + HEADER_SIZE);
+    // tell it that we are now smaller
+    bucket_after->prev_bucket_num = small_bucket_i;
+  }
+  
   // put the first smaller bucket on the stack
-  new_bucket->next = free_lists[bucket_idx-1];
-  // reassign front of list
-  free_lists[bucket_idx-1] = new_bucket;
+  new_bucket->next = free_lists[small_bucket_i];
+
+  // add it to the front of the free list
+  free_lists[small_bucket_i] = new_bucket;
+
   // set fields for the reassigned head
-  head->bucket_num = bucket_idx-1;
+  head->bucket_num = small_bucket_i;
+
   // put the reassigned head on the stack
+  // *head is now a small bucket
   head->next = new_bucket;
-  free_lists[bucket_idx-1] = head;
+  free_lists[small_bucket_i] = head;
+
   // If size is too big for the next smaller index, we're done
-  if (bucket_idx == 1 || size > BUCKET_SIZE(bucket_idx-2)-8) {
-    free_lists[bucket_idx-1] = free_lists[bucket_idx-1]->next;
+  if (big_bucket_i == 1 || size > BUCKET_SIZE(small_bucket_i-1)) {
     return;
   }
 
   // otherwise recurse
-  subdivideBucket(size, bucket_idx-1, head);
+  subdivideBucket(size, head);
 }
 
-void * alloc_aligned(int bucket_idx) {
-  void *p = mem_sbrk(BUCKET_SIZE(bucket_idx));
+/*
+ * Called when we need to increase the heap size.
+ * Grows the heap by enough memory to hold a bucket of category BUCKET_IDX.
+ */
+void *alloc_aligned(int bucket_idx) {
+  void *p = mem_sbrk(BUCKET_SIZE(bucket_idx) + HEADER_SIZE);
   if (p == (void *)-1) {
     return NULL;
   }
   return p;
 }
 
-// free - Freeing a block does nothing.
+/* 
+ * free - Frees a block, and adds its space to a linked list of freed buckets for
+ * reuse.
+ */
 void my_free(void *ptr) {
   if (ptr == NULL) {
     return;
   }
-  /* add to free list with different size now! */
-  free_list_t * flist = (free_list_t*)(ptr-SIZE_T_SIZE);
-  int bucket = flist->bucket_num; 
+
+  // Cast the pointer to a free list pointer - this means including the header
+  // we'd previously ignored
+  free_list_t * flist = (free_list_t*)((char*)ptr - HEADER_SIZE);
+  int bucket_num = flist->bucket_num;
   flist->is_free = 0x1;
-  free_list_t* bucket_list = free_lists[bucket];
-  flist->next = bucket_list;
-  free_lists[bucket] = flist;
+
+  // push it onto the stack of free lists for this bucket size
+  flist->next = free_lists[bucket_num];
+  free_lists[bucket_num] = flist;
+  
+  // coalesce entries now
   coalesceEntries(flist);
 }
 
@@ -220,75 +303,103 @@ void my_free(void *ptr) {
  * bucket. Recurses.
  */
 void coalesceEntries(free_list_t* list) {
-  int prev_bucket_num = list->prev_bucket_idx;
+  int prev_bucket_num = list->prev_bucket_num;
   int b_num = list->bucket_num;
+  printf("overall coalesce\n");
+  // Check the bucket behind this one
   if (prev_bucket_num == b_num) {
-    free_list_t* prev_list = (free_list_t*)((char*)list - BUCKET_SIZE(prev_bucket_num));
+    free_list_t* prev_list = (free_list_t*)((char*)list -
+        (BUCKET_SIZE(b_num) + HEADER_SIZE));
+
     if (prev_list->is_free == 0x1) {
-      // coalesceHelper(prev_list, list);
+      coalesceHelper(prev_list, list);
     }
+
   } else {
-    free_list_t* next_list = (free_list_t*)((char*)list + BUCKET_SIZE(b_num));
+    // check the bucket in front
+    free_list_t* next_list = (free_list_t*)((char*)list + 
+        BUCKET_SIZE(b_num) + HEADER_SIZE);
+
     if (next_list->is_free == 0x1 && next_list->bucket_num == b_num) {
-      // coalesceHelper(list, next_list);
+      coalesceHelper(list, next_list);
     }
   }
 }
 
+/*
+ * Takes two buckets of the same size, adjacent in memory, removes them 
+ * both from their free list, and joins them into a larger bucket.
+ */
 void coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
-  int bucket_idx = list_a->bucket_num;
+  int bucket_num = list_a->bucket_num;
+  int new_bucket_num = bucket_num + 1;
+  printf("trying to coalesce\n");
   // remove both from bucket_idx
-  free_list_t* bucket_list = free_lists[bucket_idx];
-    
+  // again with the O(n) search... TODO a doubly-linked list
+  removeFromFreeList(list_a, &free_lists[bucket_num]);
+  removeFromFreeList(list_b, &free_lists[bucket_num]);
+
+  /*
+  // old logic to do the same thing (probably a little faster)
+  free_list_t* bucket_list = free_lists[bucket_num];
   free_list_t* prev_item = NULL;
+
   while (bucket_list != NULL) {
     if (bucket_list == list_a || bucket_list == list_b) {
       if (prev_item != NULL) {
         prev_item->next = bucket_list->next;
       } else {
-        free_lists[bucket_idx] = free_lists[bucket_idx]->next;
+        free_lists[bucket_num] = free_lists[bucket_num]->next;
       }
+
     } else {
       prev_item = bucket_list;
     }
+
     bucket_list = bucket_list->next;
   }
-  printf("here\n");
+  */
   // update size of first
-  list_a->bucket_num = bucket_idx+1;
+  list_a->bucket_num = new_bucket_num;
+
   // update prev_size of the node after list_b
-  free_list_t* next_list = (free_list_t*)((char*)list_b + BUCKET_SIZE(bucket_idx));
-  next_list->prev_bucket_idx = bucket_idx+1;
+  free_list_t* next_list = (free_list_t*)((char*)list_b +
+      BUCKET_SIZE(bucket_num) + HEADER_SIZE);
+
+  next_list->prev_bucket_num = new_bucket_num;
   
-  // add to bucket bucket_idx+1
-  free_list_t* new_bucket_list = free_lists[bucket_idx+1];
+  // add to bucket bucket_num + 1
+  free_list_t* new_bucket_list = free_lists[new_bucket_num];
   list_a->next = new_bucket_list;
-  free_lists[bucket_idx+1] = list_a;
+  free_lists[new_bucket_num] = list_a;
 }
 
-// realloc - Implemented simply in terms of malloc and free
+/*
+ * realloc - Given an allocated chunk, move its contents to a new memory block
+ * large enough to hold SIZE. Implemented simply in terms of malloc and free.
+ */
 void * my_realloc(void *ptr, size_t size) {
   void *newptr;
-  size_t copy_size;
 
-  // Allocate a new chunk of memory, and fail if that allocation fails.
+  // Get the size of the old block of memory.
+  free_list_t * flist = (free_list_t*)((char*)ptr - HEADER_SIZE);
+  int bucket_num = flist->bucket_num;
+  size_t old_size = BUCKET_SIZE(bucket_num);
+
+  // If the new block is smaller than the old one, do nothing.
+  if (size < old_size)
+    return ptr;
+
+  //printf("realloc to size %d, from %p (bucket %d) to %p (bucket %d)\n",
+  //    (int)size, ptr, bucket_i, newptr, get_bucket_size(size));
+
+  // Allocate a new chunk of memory, and fail if that allocation does.
   newptr = my_malloc(size);
-  if (NULL == newptr)
+  if (newptr == NULL)
     return NULL;
 
-  // Get the size of the old block of memory.  Take a peek at my_malloc(),
-  // where we stashed this in the SIZE_T_SIZE bytes directly before the
-  // address we returned.  Now we can back up by that many bytes and read
-  // the size.
-  copy_size = *(size_t*)((uint8_t*)ptr - SIZE_T_SIZE);
-
-  // If the new block is smaller than the old one, we have to stop copying
-  // early so that we don't write off the end of the new block of memory.
-  if (size < copy_size)
-    copy_size = size;
-
   // This is a standard library call that performs a simple memory copy.
-  memcpy(newptr, ptr, copy_size);
+  memcpy(newptr, ptr, old_size);
 
   // Release the old block.
   my_free(ptr);
@@ -297,6 +408,7 @@ void * my_realloc(void *ptr, size_t size) {
   return newptr;
 }
 
+// XXX: This is never used.
 // check - This checks our invariant that the size_t header before every
 // block points to either the beginning of the next block, or the end of the
 // heap.
@@ -308,7 +420,7 @@ int my_check() {
 
   p = lo;
   while (lo <= p && p < hi) {
-    size = ALIGN(*(size_t*)p + SIZE_T_SIZE);
+    size = ALIGN(*(size_t*)p + HEADER_SIZE);
     p += size;
   }
 
