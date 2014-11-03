@@ -69,8 +69,8 @@ int get_bucket_size(size_t size);
 void coalesceEntries(free_list_t* list);
 void subdivideBucket(size_t size, free_list_t* head);
 void * alloc_aligned(int bucket_idx);
-int coalesceHelper(free_list_t* list_a, free_list_t* list_b);
-int removeFromFreeList(free_list_t* bucket, free_list_t** list);
+void coalesceHelper(free_list_t* list_a, free_list_t* list_b);
+void removeFromFreeList(free_list_t* bucket, free_list_t** list);
 
 free_list_t *free_lists[NUM_BUCKETS];
 int top_element_bucket;
@@ -180,11 +180,11 @@ void * my_malloc(size_t size) {
  * Remove a bucket from a linked list, using the power of O(n) search.
  * TODO: A doubly-linked free list would be immensely helpful
  */
-int removeFromFreeList(free_list_t* bucket, free_list_t** list) {
+void removeFromFreeList(free_list_t* bucket, free_list_t** list) {
   if (bucket == *list) {
     // if this bucket is at the head of its list, great!
     *list = (*list)->next;
-    return 1;
+    return;
   }
 
   // otherwise we have to iterate through everything...
@@ -192,7 +192,7 @@ int removeFromFreeList(free_list_t* bucket, free_list_t** list) {
   while (prev != NULL && prev->next != bucket) {
     // if we hit the end of the list, something is wrong.
     if (prev->next == NULL) {
-      return 0;
+      return;
     }
     prev = prev->next;
   }
@@ -200,9 +200,7 @@ int removeFromFreeList(free_list_t* bucket, free_list_t** list) {
   // cut BUCKET out from the LL, but leave the LIST head untouched.
   if (prev != NULL) {
     prev->next = bucket->next;
-    return 1;
   }
-  return 0;
 }
 
 /*
@@ -328,51 +326,28 @@ void coalesceEntries(free_list_t* list) {
  * Takes two buckets of the same size, adjacent in memory, removes them 
  * both from their free list, and joins them into a larger bucket.
  */
-int coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
+void coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
   int bucket_num = list_a->bucket_num;
   int new_bucket_num = bucket_num + 1;
   // remove both from bucket_idx
   // again with the O(n) search... TODO a doubly-linked list
-  uint64_t list_a_success = removeFromFreeList(list_a, &free_lists[bucket_num]);
-  uint64_t list_b_success = removeFromFreeList(list_b, &free_lists[bucket_num]);
+  removeFromFreeList(list_a, &free_lists[bucket_num]);
+  removeFromFreeList(list_b, &free_lists[bucket_num]);
 
-  /*
-  // old logic to do the same thing (probably a little faster)
-  free_list_t* bucket_list = free_lists[bucket_num];
-  free_list_t* prev_item = NULL;
+  // update size of first
+  list_a->bucket_num = new_bucket_num;
 
-  while (bucket_list != NULL) {
-    if (bucket_list == list_a || bucket_list == list_b) {
-      if (prev_item != NULL) {
-        prev_item->next = bucket_list->next;
-      } else {
-        free_lists[bucket_num] = free_lists[bucket_num]->next;
-      }
+  // update prev_size of the node after list_b
+  free_list_t* next_list = (free_list_t*)((char*)list_b +
+      BUCKET_SIZE(bucket_num) + HEADER_SIZE);
 
-    } else {
-      prev_item = bucket_list;
-    }
+  next_list->prev_bucket_num = new_bucket_num;
+  
+  // add to bucket bucket_num + 1
+  free_list_t* new_bucket_list = free_lists[new_bucket_num];
+  list_a->next = new_bucket_list;
+  free_lists[new_bucket_num] = list_a;
 
-    bucket_list = bucket_list->next;
-  }
-  */
-  if (list_a_success && list_b_success) {
-    // update size of first
-    list_a->bucket_num = new_bucket_num;
-
-    // update prev_size of the node after list_b
-    free_list_t* next_list = (free_list_t*)((char*)list_b +
-        BUCKET_SIZE(bucket_num) + HEADER_SIZE);
-
-    next_list->prev_bucket_num = new_bucket_num;
-    
-    // add to bucket bucket_num + 1
-    free_list_t* new_bucket_list = free_lists[new_bucket_num];
-    list_a->next = new_bucket_list;
-    free_lists[new_bucket_num] = list_a;
-    return 1;
-  }
-  return 0;
 }
 
 /*
