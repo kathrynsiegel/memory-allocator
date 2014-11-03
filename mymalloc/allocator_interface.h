@@ -90,10 +90,16 @@ static const malloc_impl_t libc_impl =
 #define CACHE_ALIGNMENT 64
 #define CACHE_ALIGN(size) ALIGN_FORWARD(size, CACHE_ALIGNMENT)
 
+/*
+ * Data structures for allocator.c
+ */
 typedef struct free_list_t {
    struct free_list_t* next;
 } free_list_t;
 
+/*
+ * Methods in allocator.c
+ */
 int my_init();
 int get_bucket_size(size_t size);
 void * my_malloc(size_t size);
@@ -107,6 +113,9 @@ void my_reset_brk();
 void * my_heap_lo();
 void * my_heap_hi();
 
+/*
+ * generic struct for a malloc implementation
+ */
 static const malloc_impl_t my_impl =
 { .init = &my_init, .malloc = &my_malloc, .realloc = &my_realloc,
   .free = &my_free, .check = &my_check, .reset_brk = &my_reset_brk,
@@ -125,35 +134,38 @@ static const malloc_impl_t bad_impl =
 { .init = &bad_init, .malloc = &bad_malloc, .realloc = &bad_realloc,
   .free = &bad_free, .check = &bad_check, .reset_brk = &bad_reset_brk,
   .heap_lo = &bad_heap_lo, .heap_hi = &bad_heap_hi};
-// int wrapped_init();
-// void * wrapped_malloc(size_t size);
-// void * wrapped_realloc(void *ptr, size_t size);
-// void wrapped_free(void *ptr);
-// int wrapped_check();
-// void wrapped_reset_brk();
-// void * wrapped_heap_lo();
-// void * wrapped_heap_hi();
 
-// static const malloc_impl_t wrapped_impl =
-// { .name = "wrapped", .aligned = 1,
-//   .init = &wrapped_init, .malloc = &wrapped_malloc, .realloc = &wrapped_realloc,
-//   .free = &wrapped_free, .check = &wrapped_check, .reset_brk = &wrapped_reset_brk,
-//   .heap_lo = &wrapped_heap_lo, .heap_hi = &wrapped_heap_hi};
+/*
+ * I think this is just cruft from the HW7 port
+int wrapped_init();
+void * wrapped_malloc(size_t size);
+void * wrapped_realloc(void *ptr, size_t size);
+void wrapped_free(void *ptr);
+int wrapped_check();
+void wrapped_reset_brk();
+void * wrapped_heap_lo();
+void * wrapped_heap_hi();
 
-// int aligned_init();
-// void * aligned_malloc(size_t size);
-// void * aligned_realloc(void *ptr, size_t size);
-// void aligned_free(void *ptr);
-// int aligned_check();
-// void aligned_reset_brk();
-// void * aligned_heap_lo();
-// void * aligned_heap_hi();
+static const malloc_impl_t wrapped_impl =
+{ .name = "wrapped", .aligned = 1,
+ .init = &wrapped_init, .malloc = &wrapped_malloc, .realloc = &wrapped_realloc,
+ .free = &wrapped_free, .check = &wrapped_check, .reset_brk = &wrapped_reset_brk,
+ .heap_lo = &wrapped_heap_lo, .heap_hi = &wrapped_heap_hi};
 
-// static const malloc_impl_t aligned_impl =
-// { .name = "aligned", .aligned = 1,
-//   .init = &aligned_init, .malloc = &aligned_malloc, .realloc = &aligned_realloc,
-//   .free = &aligned_free, .check = &aligned_check, .reset_brk = &aligned_reset_brk,
-//   .heap_lo = &aligned_heap_lo, .heap_hi = &aligned_heap_hi};
+int aligned_init();
+void * aligned_malloc(size_t size);
+void * aligned_realloc(void *ptr, size_t size);
+void aligned_free(void *ptr);
+int aligned_check();
+void aligned_reset_brk();
+void * aligned_heap_lo();
+void * aligned_heap_hi();
+
+static const malloc_impl_t aligned_impl =
+{ .name = "aligned", .aligned = 1,
+ .init = &aligned_init, .malloc = &aligned_malloc, .realloc = &aligned_realloc,
+ .free = &aligned_free, .check = &aligned_check, .reset_brk = &aligned_reset_brk,
+ .heap_lo = &aligned_heap_lo, .heap_hi = &aligned_heap_hi};
 
 
 int smart_init();
@@ -175,7 +187,8 @@ void * smart_heap_hi();
 #define SMART_PTR(p) YOUR_TASK(p)
 #define IS_SMALL(p) YOUR_TASK(0)
 #else
-/* XXX solution to be removed */
+
+// XXX solution to be removed
 #define SMART_PTR(p) (void*)(((uint64_t)p)&~1)
 #define IS_SMALL(p) (((uint64_t)p)&1)
 #endif
@@ -202,5 +215,6 @@ void * smart_heap_hi();
 //   .init = &fixed_init, .malloc = &fixed_malloc, .realloc = &fixed_realloc,
 //   .free = &fixed_free, .check = &fixed_check, .reset_brk = &fixed_reset_brk,
 //   .heap_lo = &fixed_heap_lo, .heap_hi = &fixed_heap_hi};
+ */
 
 #endif  // _ALLOCATOR_INTERFACE_H

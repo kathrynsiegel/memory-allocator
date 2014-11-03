@@ -148,7 +148,7 @@ void * my_malloc(size_t size) {
     return NULL;
   }
 
-  printf("smart_malloc %d -> %p\n", size, p);
+  printf("my_malloc %d -> %p\n", size, p);
 
   // fill header info and increment pointer by 8 bytes
   *(uint64_t*)p = bucket_idx;
