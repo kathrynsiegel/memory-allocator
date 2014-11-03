@@ -312,10 +312,8 @@ void * my_realloc(void *ptr, size_t size) {
   int bucket_i = flist->bucket_i;
   size_t copy_size = BUCKET_SIZE(bucket_i);
 
-  /*
-   *printf("realloc to size %d, from %p (bucket %d) to %p (bucket %d)\n",
-   *    (int)size, ptr, bucket_i, newptr, get_bucket_size(size));
-   */
+  //printf("realloc to size %d, from %p (bucket %d) to %p (bucket %d)\n",
+  //    (int)size, ptr, bucket_i, newptr, get_bucket_size(size));
 
   // If the new block is smaller than the old one, we have to stop copying
   // early so that we don't write off the end of the new block of memory.
