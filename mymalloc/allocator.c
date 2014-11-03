@@ -55,17 +55,28 @@
 #define BUCKET_SIZE(i) (1<<((i)+MIN_SIZE_LOG_2))
 #define FITS_INTO_BUCKET(size, bucket_idx) ((size) <= (BUCKET_SIZE(bucket_idx)-8))
 
+// keeps track of all of the size data that
+// we need for the linked list node data structure
+typedef struct size_data_t {
+  unsigned int bucket_num: 30;
+  unsigned int prev_bucket_idx: 31;
+  unsigned int is_free: 1;
+} size_data_t;
+
+// the linked list data structure that holds the blocks we want to free
 typedef struct free_list_t {
+  // struct size_data_t* bucket_data;
   size_t bucket_i;
   struct free_list_t* next;
 } free_list_t;
 
 int get_bucket_size(size_t size);
-int coalesceEntries(size_t size, void* p);
+void coalesceEntries(free_list_t* list);
 void subdivideBucket(size_t size, int bucket_idx, free_list_t* head);
 void * alloc_aligned(int bucket_idx);
 
 free_list_t *free_lists[NUM_BUCKETS];
+size_data_t *heap_top_element;
 
 // init - Initialize the malloc package.  Called once before any other
 // calls are made.  
@@ -73,6 +84,7 @@ int my_init() {
   for (int i = 0; i < NUM_BUCKETS; i++) {
     free_lists[i] = NULL;
   }
+  heap_top_element = NULL;
 
   /* align brk just once */
   void *brk = mem_heap_hi() + 1;
@@ -112,13 +124,11 @@ void * my_malloc(size_t size) {
     for (open_bucket = bucket_idx + 1; open_bucket <= NUM_BUCKETS; ++open_bucket) {
       if (free_lists[open_bucket] != NULL) {
         head = &free_lists[open_bucket];
+        // We have a free bucket, but it's too big: subdivide it and assign p.
+        p = *head;
+        subdivideBucket(size, open_bucket, *head);
         break;
       }
-    }
-    if (head != NULL) {
-      // We have a free bucket, but it's too big: subdivide it and assign p.
-      p = *head;
-      subdivideBucket(size, open_bucket, *head);
     }
   } 
 
@@ -136,74 +146,20 @@ void * my_malloc(size_t size) {
 
   // fill header info and increment pointer by 8 bytes
   free_list_t* new_list = (free_list_t*)p;
+  // size_data_t* new_bucket_data = (size_data_t*)p;
+  // new_bucket_data->bucket_num = bucket_idx;
+  // new_bucket_data->is_free = 0;
+
+  // if (heap_top_element) {
+  //   new_bucket_data->prev_bucket_idx = heap_top_element->bucket_num;
+  // }
+
+  // new_list->bucket_data = new_bucket_data;
+
+
   new_list->bucket_i = bucket_idx;
+  
   return p+SIZE_T_SIZE;
-}
-
-/*
- * Takes a size which it needs to allocate to pointer p.
- * Moves two smaller buckets next to each other and makes them into a larger
- * bucket. Recurses until there exists a bucket larger than size, and stores 
- * the address of the bucket in p.
- */
-int coalesceEntries(size_t size, void* p) {
-  free_list_t* cur_free_list;
-  size_t large_size;
-  size_t small_size;
-  // check if we can coalesce two smaller entries
-  int can_coalesce = 0;
-
-  for (int i = NUM_BUCKETS-2; i > 0; i--) {
-    if (size < BUCKET_SIZE(i+1) && free_lists[i] && free_lists[i]->next) {
-      cur_free_list = free_lists[i];
-      large_size = BUCKET_SIZE(i+1);
-      small_size = BUCKET_SIZE(i);
-      can_coalesce = 1;
-    }
-  }
-
-  // two entries are available in a smaller list: force them to merge
-  if (can_coalesce) {
-    free_list_t* p1 = cur_free_list;
-    free_list_t* p2 = p1->next;
-
-    /* find which one is smaller of p1 and p2,
-     * use smallest to ensure its not beyond the end of brk */
-    if (p1 > p2) {
-      p1 = p2;
-      p2 = cur_free_list;
-    }
-    // Remove the two buckets from the free list
-    cur_free_list = cur_free_list->next->next;
-
-    /* find the alternate, potentially live element */
-    if (ALIGNED(p1, large_size)) {
-      p = p1;
-      p1 += small_size;
-    } else {
-      p1 -= small_size;
-      p = p1;
-    }
-    // assert(ALIGNED(p, CACHE_ALIGNMENT));
-
-    /* RELOCATE should ignore us if the entry is no longer VALID
-     * We could ask whether one or the other is a valid object
-     * Any object is assumed to be relocatable. */
-    // if (relocate_callback(relocate_state, p1, p2)) {
-      // memcpy(p2, p1, small_size);
-    // } else {
-      /* if not found, even better - item is already dead! */
-    // }
-    // Having reallocated, return TRUE if there is now a bucket large enough
-    // to hold SIZE.
-    if (large_size > size) {
-      return 1;
-    } 
-    // Recurse otherwise.
-    coalesceEntries(size, p);
-  }
-  // We failed to coalesce.
-  return 0;
 }
 
 /*
@@ -254,10 +210,76 @@ void my_free(void *ptr) {
   }
   /* add to free list with different size now! */
   free_list_t * flist = (free_list_t*)(ptr-SIZE_T_SIZE);
-  int bucket = flist->bucket_i;    
+  // int bucket = (int)flist->bucket_data->bucket_num; 
+  int bucket = flist->bucket_i;   
   free_list_t* bucket_list = free_lists[bucket];
   flist->next = bucket_list;
   free_lists[bucket] = flist;
+
+  coalesceEntries(flist);
+}
+
+/*
+ * Coalesces two adjacent free buckets and makes them into a larger
+ * bucket. Recurses.
+ */
+void coalesceEntries(free_list_t* list) {
+  // check if we can coalesce two smaller entries
+  // size_t b_num = list->bucket_data->bucket_num;
+  // int b_size = BUCKET_SIZE(b_num);
+
+  // int can_coalesce = 0;
+
+  // for (int i = NUM_BUCKETS-2; i > 0; i--) {
+  //   if (size < BUCKET_SIZE(i+1) && free_lists[i] && free_lists[i]->next) {
+  //     cur_free_list = free_lists[i];
+  //     large_size = BUCKET_SIZE(i+1);
+  //     small_size = BUCKET_SIZE(i);
+  //     can_coalesce = 1;
+  //   }
+  // }
+
+  // // two entries are available in a smaller list: force them to merge
+  // if (can_coalesce) {
+  //   free_list_t* p1 = cur_free_list;
+  //   free_list_t* p2 = p1->next;
+
+  //   /* find which one is smaller of p1 and p2,
+  //    * use smallest to ensure its not beyond the end of brk */
+  //   if (p1 > p2) {
+  //     p1 = p2;
+  //     p2 = cur_free_list;
+  //   }
+  //   // Remove the two buckets from the free list
+  //   cur_free_list = cur_free_list->next->next;
+
+  //    find the alternate, potentially live element 
+  //   if (ALIGNED(p1, large_size)) {
+  //     p = p1;
+  //     p1 += small_size;
+  //   } else {
+  //     p1 -= small_size;
+  //     p = p1;
+  //   }
+  //   // assert(ALIGNED(p, CACHE_ALIGNMENT));
+
+  //   /* RELOCATE should ignore us if the entry is no longer VALID
+  //    * We could ask whether one or the other is a valid object
+  //    * Any object is assumed to be relocatable. */
+  //   // if (relocate_callback(relocate_state, p1, p2)) {
+  //     // memcpy(p2, p1, small_size);
+  //   // } else {
+  //     /* if not found, even better - item is already dead! */
+  //   // }
+  //   // Having reallocated, return TRUE if there is now a bucket large enough
+  //   // to hold SIZE.
+  //   if (large_size > size) {
+  //     return 1;
+  //   } 
+  //   // Recurse otherwise.
+  //   coalesceEntries(size, p);
+  // }
+  // We failed to coalesce.
 }
 
 // realloc - Implemented simply in terms of malloc and free
