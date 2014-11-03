@@ -68,6 +68,7 @@ int get_bucket_size(size_t size);
 void coalesceEntries(free_list_t* list);
 void subdivideBucket(size_t size, int bucket_idx, free_list_t* head);
 void * alloc_aligned(int bucket_idx);
+void coalesceHelper(free_list_t* list_a, free_list_t* list_b);
 
 free_list_t *free_lists[NUM_BUCKETS];
 free_list_t * heap_top;
@@ -207,12 +208,12 @@ void my_free(void *ptr) {
   /* add to free list with different size now! */
   free_list_t * flist = (free_list_t*)(ptr-SIZE_T_SIZE);
   int bucket = flist->bucket_num; 
-  flist->is_free = 1;
+  flist->is_free = 0x1;
   free_list_t* bucket_list = free_lists[bucket];
   flist->next = bucket_list;
   free_lists[bucket] = flist;
 
-  coalesceEntries(flist);
+  // coalesceEntries(flist);
 }
 
 /*
@@ -220,62 +221,46 @@ void my_free(void *ptr) {
  * bucket. Recurses.
  */
 void coalesceEntries(free_list_t* list) {
-  // check if we can coalesce two smaller entries
-  // size_t b_num = list->bucket_data->bucket_num;
-  // int b_size = BUCKET_SIZE(b_num);
+  int prev_bucket_num = list->prev_bucket_idx;
+  int b_num = list->bucket_num;
+  if (prev_bucket_num == b_num) {
+    free_list_t* prev_list = (free_list_t*)((void*)list - BUCKET_SIZE(prev_bucket_num));
+    if (prev_list->is_free == 0x1) {
+      coalesceHelper(prev_list, list);
+    }
+  } else {
+    free_list_t* next_list = (free_list_t*)((void*)list + BUCKET_SIZE(b_num));
+    if (next_list->is_free == 0x1 && next_list->bucket_num == b_num) {
+      coalesceHelper(list, next_list);
+    }
+  }
+}
 
-  // int can_coalesce = 0;
+void coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
+  int bucket_idx = list_a->bucket_num;
 
-  // for (int i = NUM_BUCKETS-2; i > 0; i--) {
-  //   if (size < BUCKET_SIZE(i+1) && free_lists[i] && free_lists[i]->next) {
-  //     cur_free_list = free_lists[i];
-  //     large_size = BUCKET_SIZE(i+1);
-  //     small_size = BUCKET_SIZE(i);
-  //     can_coalesce = 1;
-  //   }
-  // }
-
-  // // two entries are available in a smaller list: force them to merge
-  // if (can_coalesce) {
-  //   free_list_t* p1 = cur_free_list;
-  //   free_list_t* p2 = p1->next;
-
-  //   /* find which one is smaller of p1 and p2,
-  //    * use smallest to ensure its not beyond the end of brk */
-  //   if (p1 > p2) {
-  //     p1 = p2;
-  //     p2 = cur_free_list;
-  //   }
-  //   // Remove the two buckets from the free list
-  //   cur_free_list = cur_free_list->next->next;
-
-  //    find the alternate, potentially live element 
-  //   if (ALIGNED(p1, large_size)) {
-  //     p = p1;
-  //     p1 += small_size;
-  //   } else {
-  //     p1 -= small_size;
-  //     p = p1;
-  //   }
-  //   // assert(ALIGNED(p, CACHE_ALIGNMENT));
-
-  //   /* RELOCATE should ignore us if the entry is no longer VALID
-  //    * We could ask whether one or the other is a valid object
-  //    * Any object is assumed to be relocatable. */
-  //   // if (relocate_callback(relocate_state, p1, p2)) {
-  //     // memcpy(p2, p1, small_size);
-  //   // } else {
-  //     /* if not found, even better - item is already dead! */
-  //   // }
-  //   // Having reallocated, return TRUE if there is now a bucket large enough
-  //   // to hold SIZE.
-  //   if (large_size > size) {
-  //     return 1;
-  //   } 
-  //   // Recurse otherwise.
-  //   coalesceEntries(size, p);
-  // }
-  // We failed to coalesce.
+  // update size of first
+  list_a->bucket_num = bucket_idx+1;
+  // update prev_size of the node after list_b
+  free_list_t* next_list = (free_list_t*)((void*)list_b + BUCKET_SIZE(bucket_idx));
+  next_list->prev_bucket_idx = bucket_idx+1;
+  // remove both from bucket_idx
+  free_list_t* bucket_list = free_lists[bucket_idx];
+  free_list_t* prev_item = NULL;
+  while (bucket_list != NULL) {
+    if (bucket_list == list_a || bucket_list == list_b) {
+      if (prev_item != NULL) {
+        prev_item->next = bucket_list->next;
+      } else {
+        free_lists[bucket_idx] = free_lists[bucket_idx]->next;
+      }
+    }
+    bucket_list = bucket_list->next;
+  }
+  // add to bucket bucket_idx+1
+  free_list_t* new_bucket_list = free_lists[bucket_idx+1];
+  list_a->next = new_bucket_list;
+  free_lists[bucket_idx+1] = list_a;
 }
 
 // realloc - Implemented simply in terms of malloc and free
