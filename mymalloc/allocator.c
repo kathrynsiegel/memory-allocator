@@ -71,7 +71,7 @@ void subdivideBucket(size_t size, int bucket_idx, free_list_t* head);
 void * alloc_aligned(int bucket_idx);
 
 free_list_t *free_lists[NUM_BUCKETS];
-size_t prev_bucket_i;
+free_list_t * heap_top;
 
 // init - Initialize the malloc package.  Called once before any other
 // calls are made.  
@@ -79,7 +79,7 @@ int my_init() {
   for (int i = 0; i < NUM_BUCKETS; i++) {
     free_lists[i] = NULL;
   }
-  prev_bucket_i = NULL;
+  heap_top = NULL;
 
   /* align brk just once */
   void *brk = mem_heap_hi() + 1;
@@ -143,11 +143,9 @@ void * my_malloc(size_t size) {
   free_list_t* new_list = (free_list_t*)p;
   new_list->bucket_num = bucket_idx;
   new_list->is_free = 0;
-
-  // if (heap_top_element) {
-  //   new_bucket_data->prev_bucket_idx = heap_top_element->bucket_num;
-  // }
-  
+  if (heap_top != NULL) {
+    new_list->prev_bucket_idx = heap_top->bucket_num;
+  }
   return p+SIZE_T_SIZE;
 }
 
@@ -200,6 +198,7 @@ void my_free(void *ptr) {
   /* add to free list with different size now! */
   free_list_t * flist = (free_list_t*)(ptr-SIZE_T_SIZE);
   int bucket = flist->bucket_num; 
+  flist->is_free = 1;
   free_list_t* bucket_list = free_lists[bucket];
   flist->next = bucket_list;
   free_lists[bucket] = flist;
