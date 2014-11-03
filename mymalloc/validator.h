@@ -50,7 +50,6 @@ typedef struct range_t {
 static int add_range(const malloc_impl_t *impl, range_t **ranges, char *lo,
     int size, int tracenum, int opnum) {
   char *hi = lo + size - 1;
-  range_t *p = NULL;
 
   // You can use this as a buffer for writing messages with sprintf.
   // char msg[MAXLINE];
@@ -68,13 +67,12 @@ static int add_range(const malloc_impl_t *impl, range_t **ranges, char *lo,
     malloc_error(tracenum, 0, "impl add range failed: payload not in heap.");
 
   // The payload must not overlap any other payloads
-  p = NULL;
-  range_t *pnext;
-  for (p = *ranges; p != NULL; p = pnext) {
+  range_t *p = *ranges;
+  while (p != NULL) {
     if ((p->lo <= hi && p->hi >= hi) || (p-> lo <= lo && p->hi >= lo)) {
       malloc_error(tracenum, 0, "impl add range failed: payload overlaps another range.");
     }
-    pnext = p->next;
+    p = p->next;
   }
 
   // Everything looks OK, so remember the extent of this block by creating a
@@ -90,26 +88,28 @@ static int add_range(const malloc_impl_t *impl, range_t **ranges, char *lo,
 
 // remove_range - Free the range record of block whose payload starts at lo
 static int remove_range(range_t **ranges, char *lo) {
-  //  range_t *p = NULL;
   range_t *p = NULL;
   range_t *prevpp = *ranges;
 
   if (prevpp == NULL)
     return 0;
 
-  // Handle the case where the list head has the payload
+  // Check to see if the range is at the head of the list.
   if (prevpp->lo == lo) {
     *ranges = prevpp->next;
     free(prevpp);
     return 1;
   }
 
+  p = prevpp->next;
+
   // Iterate the linked list until you find the range with a matching lo
-  // payload and remove it.  Remember to properly handle the case where the
-  // payload is in the first node, and to free the node after unlinking it.
-  for (p = prevpp; p->lo != lo; prevpp = p) {
+  // payload and remove it. 
+  while (p->lo != lo) {
+    prevpp = p;
     p = prevpp->next;
   }
+  
   // p is now pointing to the range with the payload. Cut it out of the loop.
   prevpp->next = p->next;
   free(p);
@@ -118,13 +118,15 @@ static int remove_range(range_t **ranges, char *lo) {
 
 // clear_ranges - free all of the range records for a trace
 static void clear_ranges(range_t **ranges) {
-  range_t *p;
+  range_t *p = *ranges;
   range_t *pnext;
 
-  for (p = *ranges; p != NULL; p = pnext) {
+  while (p != NULL) {
     pnext = p->next;
     free(p);
+    p = pnext;
   }
+
   *ranges = NULL;
 }
 
@@ -173,7 +175,7 @@ int eval_mm_valid(const malloc_impl_t *impl, trace_t *trace, int tracenum) {
         // (project 3)
         // Just a sequence of numbers, starting at 0.
         for (int j = 0; j < size; j++) {
-          p[j] = (char)j;
+          p[j] = (uint8_t)j;
         }
 
         // Remember region
@@ -183,15 +185,15 @@ int eval_mm_valid(const malloc_impl_t *impl, trace_t *trace, int tracenum) {
 
       case REALLOC:  // realloc
 
-        // Call the student's realloc
-        oldp = trace->blocks[index];
+        // Call our realloc
+        oldp = (char *) trace->blocks[index];
         if ((newp = (char *) impl->realloc(oldp, size)) == NULL) {
           malloc_error(tracenum, i, "impl realloc failed.");
           return 0;
         }
 
         // Remove the old region from the range list
-        if (remove_range(&ranges, p) == 0) {
+        if (remove_range(&ranges, oldp) == 0) {
           printf("remove_range failed: no range to remove!");
           return 0;
         }
@@ -208,16 +210,24 @@ int eval_mm_valid(const malloc_impl_t *impl, trace_t *trace, int tracenum) {
           oldsize = size;
         
         // (project3)
-        // Check that the new block contains the data from the new block, then
+        // Check that the new block contains the data from the old block, then
         // fill the new extra space with stuff.
         for (int j = 0; j < size; j++) {
-          if (j < oldsize && trace->blocks[index][j] != (char)j) {
-            printf("impl realloc failed: data at location %p[%d] "
-                  "has been corrupted. New value: %x",
-                  trace->blocks[index], j, (char)trace->blocks[index][j]);
-            malloc_error(tracenum, i, "bloop"); 
+          if (j < oldsize) {
+            if ((uint8_t) newp[j] != (uint8_t) j) {
+              
+              // if a value in [0, oldsize) doesn't match, something went wrong
+              printf("impl realloc failed: data at location %p[%d] "
+                    "not copied properly. Expected value: %d, new value: %d\n",
+                    newp, j, (uint8_t) j, (uint8_t) newp[j]);
+              malloc_error(tracenum, i, "impl realloc failed"); 
+              
+              // throw an error
+              assert(0);
+            } 
+          } else {
+            newp[j] = (uint8_t)j;
           }
-          trace->blocks[index][j] = (char)j;
         }
 
         // Remember region
