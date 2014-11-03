@@ -299,11 +299,6 @@ void my_free(void *ptr) {
 void * my_realloc(void *ptr, size_t size) {
   void *newptr;
 
-  // Allocate a new chunk of memory, and fail if that allocation does.
-  newptr = my_malloc(size);
-  if (newptr == NULL)
-    return NULL;
-
   // Get the size of the old block of memory.  Take a peek at my_malloc(),
   // where we stashed this in the HEADER_SIZE bytes directly before the
   // address we returned.  Now we can back up by that many bytes and read
@@ -312,13 +307,17 @@ void * my_realloc(void *ptr, size_t size) {
   int bucket_i = flist->bucket_i;
   size_t copy_size = BUCKET_SIZE(bucket_i);
 
+  // If the new block is smaller than the old one, do nothing.
+  if (size < copy_size)
+    return ptr;
+
   //printf("realloc to size %d, from %p (bucket %d) to %p (bucket %d)\n",
   //    (int)size, ptr, bucket_i, newptr, get_bucket_size(size));
 
-  // If the new block is smaller than the old one, we have to stop copying
-  // early so that we don't write off the end of the new block of memory.
-  if (size < copy_size)
-    copy_size = size;
+  // Allocate a new chunk of memory, and fail if that allocation does.
+  newptr = my_malloc(size);
+  if (newptr == NULL)
+    return NULL;
 
   // This is a standard library call that performs a simple memory copy.
   memcpy(newptr, ptr, copy_size);
