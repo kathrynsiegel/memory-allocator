@@ -54,11 +54,22 @@
 #define NUM_BUCKETS MAX_SIZE_LOG_2 - MIN_SIZE_LOG_2
 #define SIZE_CACHE_LINE 64
 
-#define SIZE_PTR(p) (size_t*)(((char*)p-SIZE_T_SIZE))
+// #define SIZE_PTR(p) (size_t*)(((char*)p-SIZE_T_SIZE))
 
 #define BUCKET_SIZE(i) (1<<((i)+MIN_SIZE_LOG_2))
 
 #define FITS_INTO_BUCKET(size, bucket_idx) ((size) <= (BUCKET_SIZE(bucket_idx)-8))
+
+typedef struct free_list_t {
+  size_t bucket_i;
+  struct free_list_t* next;
+} free_list_t;
+
+int get_bucket_size(size_t size);
+int coalesceEntries(size_t size, void* p);
+void subdivideBucket(size_t size, int bucket_idx, free_list_t* head);
+void * alloc_aligned(int bucket_idx);
+
 
 free_list_t *free_lists[NUM_BUCKETS];
 
@@ -97,21 +108,21 @@ void * my_malloc(size_t size) {
   free_list_t** head = NULL;
   void *p = NULL;
   int bucket_idx = get_bucket_size(size);
-  printf("bucket index: %d\n",bucket_idx);
+  // printf("bucket index: %d\n",bucket_idx);
   if (free_lists[bucket_idx] != NULL) {
-    printf("taking from exact size bucket\n");
+    // printf("taking from exact size bucket\n");
     head = &free_lists[bucket_idx];
-    printf("bucket stats: bucket %d with head %p with next %p\n", bucket_idx, *head, (*head)->next);
-    if ((*head)->next < 30) {
-      printf("fuck\n");
-      (*head)->next = NULL;
-    } else {
+    // printf("bucket stats: bucket %d with head %p with next %p\n", bucket_idx, *head, (*head)->next);
+    // if ((*head)->next < 30) {
+    //   printf("fuck\n");
+    //   (*head)->next = NULL;
+    // } else {
       p = *head;
       free_lists[bucket_idx] = free_lists[bucket_idx]->next;
       if (free_lists[bucket_idx]) {
-        printf("head->next = %p\n", (*head)->next);
+        // printf("head->next = %p\n", (*head)->next);
       }
-    }
+    // }
     
   } else {
     // Find an open bucket that is larger than the one we need
@@ -123,11 +134,11 @@ void * my_malloc(size_t size) {
       }
     }
     if (head != NULL) {
-      printf("subdivide bucket %d to fit size %d\n", open_bucket, size);
+      // printf("subdivide bucket %d to fit size %zu\n", open_bucket, size);
       // We have a free bucket, but it's too big: subdivide it and assign p.
       p = *head;
       subdivideBucket(size, open_bucket, *head);
-      printf("new bucket %d is %p with next %p\n", bucket_idx, free_lists[bucket_idx], free_lists[bucket_idx]->next);
+      // printf("new bucket %d is %p with next %p\n", bucket_idx, free_lists[bucket_idx], free_lists[bucket_idx]->next);
     } //else {
       // If asking for large and there are small entries on free list
       // coalesce entries even if non-neighboring
@@ -148,13 +159,14 @@ void * my_malloc(size_t size) {
     return NULL;
   }
 
-  printf("smart_malloc %d -> %p\n", size, p);
+  // printf("smart_malloc %zu -> %p\n", size, p);
 
   // fill header info and increment pointer by 8 bytes
-  *(uint64_t*)p = bucket_idx;
-  p = (void*)((uint64_t*)p + 1); 
-
-  return p;
+  // *(uint64_t*)p = bucket_idx;
+  // p = (void*)((uint64_t*)p + 1); 
+  free_list_t* new_list = (free_list_t*)p;
+  new_list->bucket_i = bucket_idx;
+  return p+SIZE_T_SIZE;
 }
 
 /*
@@ -235,36 +247,36 @@ int coalesceEntries(size_t size, void* p) {
  * bucketp: pointer to the start of the bucket
  */
 void subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
-  printf("subdividing using size %d\n", size);
+  // printf("subdividing using size %zu\n", size);
   // Advance the pointer of the relevant free list, to let it know we're
   // stealing this chunk of memory
   head = free_lists[bucket_idx];
   free_lists[bucket_idx] = free_lists[bucket_idx]->next;
-  printf("1) set free list %d to %p\n", bucket_idx, head->next);
+  // printf("1) set free list %d to %p\n", bucket_idx, head->next);
   // our new size is smaller
   size_t new_bucket_size = BUCKET_SIZE(bucket_idx-1);
   // make room for the new bucket
-  free_list_t* new_bucket = (free_list_t*)(head + new_bucket_size);
+  free_list_t* new_bucket = (free_list_t*)((void*)head + new_bucket_size);
   // put the first smaller bucket on the stack
-  printf("old prev is %p\n", free_lists[bucket_idx-1]);
+  // printf("old prev is %p\n", free_lists[bucket_idx-1]);
   new_bucket->next = free_lists[bucket_idx-1];
   free_lists[bucket_idx-1] = new_bucket;
 
-  printf("2) set free list %d to %p with next %p\n", bucket_idx-1, new_bucket, new_bucket->next);
+  // printf("2) set free list %d to %p with next %p\n", bucket_idx-1, new_bucket, new_bucket->next);
   // put the reassigned head on the stack
   head->next = new_bucket;
   free_lists[bucket_idx-1] = head;
-  printf("3) set free list %d to %p with next %p\n", bucket_idx-1, head, head->next);
+  // printf("3) set free list %d to %p with next %p\n", bucket_idx-1, head, head->next);
 
   // If size is too big for the next smaller index, we're done
   if (bucket_idx == 1 || size > BUCKET_SIZE(bucket_idx-2)-8) {
-    printf("we're done\n");
+    // printf("we're done\n");
     free_lists[bucket_idx-1] = free_lists[bucket_idx-1]->next;
     return;
   }
 
   // otherwise recurse
-  printf("recursively subdividing bucket %d with head %p\n", bucket_idx-1, head);
+  // printf("recursively subdividing bucket %d with head %p\n", bucket_idx-1, head);
   subdivideBucket(size, bucket_idx-1, head);
 }
 
@@ -290,22 +302,15 @@ void my_free(void *ptr) {
     return;
   }
   /* add to free list with different size now! */
-  size_t * sizeptr = SIZE_PTR(ptr);
-  int bucket = (int)*sizeptr;
-  printf("trying to free ptr %p and size %p and bucket %lu\n", sizeptr, *sizeptr, bucket);
-    
-  // if (!bucket > 29) {
-  printf("trying to free ptr %p and size %p and bucket %lu\n", sizeptr, *sizeptr, bucket);
+  free_list_t * flist = (free_list_t*)(ptr-SIZE_T_SIZE);
+  int bucket = flist->bucket_i;    
+  // printf("trying to free ptr %p and bucket %d\n", flist, bucket);
   free_list_t* bucket_list = free_lists[bucket];
   // printf("free bucket: %lu previous head: %p\n", bucket, bucket_list);
-  free_list_t* flist_node = (free_list_t*) sizeptr;
-  flist_node->next = bucket_list;
-  printf("free list new head: %p old head: %p\n", flist_node, flist_node->next);
+  flist->next = bucket_list;
+  // printf("free list new head: %p old head: %p\n", flist, flist->next);
 
-  free_lists[bucket] = flist_node;
-  // } else {
-  //   printf("oops\n");
-  // }
+  free_lists[bucket] = flist;
   
 }
 
