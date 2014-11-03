@@ -58,9 +58,9 @@
 
 // the linked list data structure that holds the blocks we want to free
 typedef struct free_list_t {
-  // unsigned int bucket_num: 30;
-  // unsigned int prev_bucket_idx: 30;
-  // unsigned int is_free: 2;
+  unsigned int bucket_num: 30;
+  unsigned int prev_bucket_idx: 30;
+  unsigned int is_free: 2;
   size_t bucket_i;
   struct free_list_t* next;
 } free_list_t;
@@ -141,18 +141,12 @@ void * my_malloc(size_t size) {
 
   // fill header info and increment pointer by 8 bytes
   free_list_t* new_list = (free_list_t*)p;
-  // size_data_t* new_bucket_data = (size_data_t*)p;
-  // new_bucket_data->bucket_num = bucket_idx;
-  // new_bucket_data->is_free = 0;
+  new_list->bucket_num = bucket_idx;
+  new_list->is_free = 0;
 
   // if (heap_top_element) {
   //   new_bucket_data->prev_bucket_idx = heap_top_element->bucket_num;
   // }
-
-  // new_list->bucket_data = new_bucket_data;
-
-
-  new_list->bucket_i = bucket_idx;
   
   return p+SIZE_T_SIZE;
 }
@@ -205,8 +199,7 @@ void my_free(void *ptr) {
   }
   /* add to free list with different size now! */
   free_list_t * flist = (free_list_t*)(ptr-SIZE_T_SIZE);
-  // int bucket = (int)flist->bucket_data->bucket_num; 
-  int bucket = flist->bucket_i;   
+  int bucket = flist->bucket_num; 
   free_list_t* bucket_list = free_lists[bucket];
   flist->next = bucket_list;
   free_lists[bucket] = flist;
