@@ -366,10 +366,12 @@ void * my_realloc(void *ptr, size_t size) {
   if (size < old_size)
     return ptr;
 
-  // Allocate a new chunk of memory, and fail if that allocation does.
-  newptr = my_malloc(size);
-  if (newptr == NULL)
-    return NULL;
+  // If the new block is smaller than the old one, the pointer stays the same.
+  if (size < old_size) {
+    if (BUCKET_SIZE(get_bucket_num(size)) < old_size)
+      subdivideBucket(size, ptr);
+    return ptr;
+  }
 
   // This is a standard library call that performs a simple memory copy.
   memcpy(newptr, ptr, old_size);
