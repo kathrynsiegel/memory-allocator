@@ -55,17 +55,12 @@
 #define BUCKET_SIZE(i) (1<<((i)+MIN_SIZE_LOG_2))
 #define FITS_INTO_BUCKET(size, bucket_idx) ((size) <= (BUCKET_SIZE(bucket_idx)-8))
 
-// keeps track of all of the size data that
-// we need for the linked list node data structure
-typedef struct size_data_t {
-  unsigned int bucket_num: 30;
-  unsigned int prev_bucket_idx: 31;
-  unsigned int is_free: 1;
-} size_data_t;
 
 // the linked list data structure that holds the blocks we want to free
 typedef struct free_list_t {
-  // struct size_data_t* bucket_data;
+  // unsigned int bucket_num: 30;
+  // unsigned int prev_bucket_idx: 30;
+  // unsigned int is_free: 2;
   size_t bucket_i;
   struct free_list_t* next;
 } free_list_t;
@@ -76,7 +71,7 @@ void subdivideBucket(size_t size, int bucket_idx, free_list_t* head);
 void * alloc_aligned(int bucket_idx);
 
 free_list_t *free_lists[NUM_BUCKETS];
-size_data_t *heap_top_element;
+size_t prev_bucket_i;
 
 // init - Initialize the malloc package.  Called once before any other
 // calls are made.  
@@ -84,7 +79,7 @@ int my_init() {
   for (int i = 0; i < NUM_BUCKETS; i++) {
     free_lists[i] = NULL;
   }
-  heap_top_element = NULL;
+  prev_bucket_i = NULL;
 
   /* align brk just once */
   void *brk = mem_heap_hi() + 1;
