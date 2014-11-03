@@ -61,7 +61,6 @@ typedef struct free_list_t {
   unsigned int bucket_num: 30;
   unsigned int prev_bucket_idx: 30;
   unsigned int is_free: 2;
-  size_t bucket_i;
   struct free_list_t* next;
 } free_list_t;
 
