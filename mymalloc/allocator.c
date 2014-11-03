@@ -165,9 +165,19 @@ void subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
   size_t new_bucket_size = BUCKET_SIZE(bucket_idx-1);
   // make room for the new bucket
   free_list_t* new_bucket = (free_list_t*)((void*)head + new_bucket_size);
+  // set fields for the new bucket
+  new_bucket->bucket_num = bucket_idx-1;
+  new_bucket->prev_bucket_idx = bucket_idx-1;
+  new_bucket->is_free = 0x1;
+  // set fields for the bucket after this new bucket
+  free_list_t* bucket_after = (free_list_t*)((void*)head + BUCKET_SIZE(bucket_idx));
+  bucket_after->prev_bucket_idx = bucket_idx-1;
   // put the first smaller bucket on the stack
   new_bucket->next = free_lists[bucket_idx-1];
+  // reassign front of list
   free_lists[bucket_idx-1] = new_bucket;
+  // set fields for the reassigned head
+  head->bucket_num = bucket_idx-1;
   // put the reassigned head on the stack
   head->next = new_bucket;
   free_lists[bucket_idx-1] = head;
