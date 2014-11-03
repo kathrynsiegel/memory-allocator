@@ -225,12 +225,12 @@ void coalesceEntries(free_list_t* list) {
   if (prev_bucket_num == b_num) {
     free_list_t* prev_list = (free_list_t*)((char*)list - BUCKET_SIZE(prev_bucket_num));
     if (prev_list->is_free == 0x1) {
-      coalesceHelper(prev_list, list);
+      // coalesceHelper(prev_list, list);
     }
   } else {
     free_list_t* next_list = (free_list_t*)((char*)list + BUCKET_SIZE(b_num));
     if (next_list->is_free == 0x1 && next_list->bucket_num == b_num) {
-      coalesceHelper(list, next_list);
+      // coalesceHelper(list, next_list);
     }
   }
 }
@@ -253,6 +253,7 @@ void coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
     }
     bucket_list = bucket_list->next;
   }
+  printf("here\n");
   // update size of first
   list_a->bucket_num = bucket_idx+1;
   // update prev_size of the node after list_b
