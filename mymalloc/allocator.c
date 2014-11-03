@@ -165,13 +165,13 @@ void subdivideBucket(size_t size, int bucket_idx, free_list_t* head) {
   // our new size is smaller
   size_t new_bucket_size = BUCKET_SIZE(bucket_idx-1);
   // make room for the new bucket
-  free_list_t* new_bucket = (free_list_t*)((void*)head + new_bucket_size);
+  free_list_t* new_bucket = (free_list_t*)((char*)head + new_bucket_size);
   // set fields for the new bucket
   new_bucket->bucket_num = bucket_idx-1;
   new_bucket->prev_bucket_idx = bucket_idx-1;
   new_bucket->is_free = 0x1;
   // set fields for the bucket after this new bucket
-  free_list_t* bucket_after = (free_list_t*)((void*)head + BUCKET_SIZE(bucket_idx));
+  free_list_t* bucket_after = (free_list_t*)((char*)head + BUCKET_SIZE(bucket_idx));
   bucket_after->prev_bucket_idx = bucket_idx-1;
   // put the first smaller bucket on the stack
   new_bucket->next = free_lists[bucket_idx-1];
@@ -212,8 +212,7 @@ void my_free(void *ptr) {
   free_list_t* bucket_list = free_lists[bucket];
   flist->next = bucket_list;
   free_lists[bucket] = flist;
-
-  // coalesceEntries(flist);
+  coalesceEntries(flist);
 }
 
 /*
@@ -224,12 +223,12 @@ void coalesceEntries(free_list_t* list) {
   int prev_bucket_num = list->prev_bucket_idx;
   int b_num = list->bucket_num;
   if (prev_bucket_num == b_num) {
-    free_list_t* prev_list = (free_list_t*)((void*)list - BUCKET_SIZE(prev_bucket_num));
+    free_list_t* prev_list = (free_list_t*)((char*)list - BUCKET_SIZE(prev_bucket_num));
     if (prev_list->is_free == 0x1) {
       coalesceHelper(prev_list, list);
     }
   } else {
-    free_list_t* next_list = (free_list_t*)((void*)list + BUCKET_SIZE(b_num));
+    free_list_t* next_list = (free_list_t*)((char*)list + BUCKET_SIZE(b_num));
     if (next_list->is_free == 0x1 && next_list->bucket_num == b_num) {
       coalesceHelper(list, next_list);
     }
@@ -238,14 +237,9 @@ void coalesceEntries(free_list_t* list) {
 
 void coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
   int bucket_idx = list_a->bucket_num;
-
-  // update size of first
-  list_a->bucket_num = bucket_idx+1;
-  // update prev_size of the node after list_b
-  free_list_t* next_list = (free_list_t*)((void*)list_b + BUCKET_SIZE(bucket_idx));
-  next_list->prev_bucket_idx = bucket_idx+1;
   // remove both from bucket_idx
   free_list_t* bucket_list = free_lists[bucket_idx];
+    
   free_list_t* prev_item = NULL;
   while (bucket_list != NULL) {
     if (bucket_list == list_a || bucket_list == list_b) {
@@ -254,9 +248,17 @@ void coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
       } else {
         free_lists[bucket_idx] = free_lists[bucket_idx]->next;
       }
+    } else {
+      prev_item = bucket_list;
     }
     bucket_list = bucket_list->next;
   }
+  // update size of first
+  list_a->bucket_num = bucket_idx+1;
+  // update prev_size of the node after list_b
+  free_list_t* next_list = (free_list_t*)((char*)list_b + BUCKET_SIZE(bucket_idx));
+  next_list->prev_bucket_idx = bucket_idx+1;
+  
   // add to bucket bucket_idx+1
   free_list_t* new_bucket_list = free_lists[bucket_idx+1];
   list_a->next = new_bucket_list;
