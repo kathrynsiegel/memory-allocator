@@ -65,7 +65,7 @@ typedef struct free_list_t {
   struct free_list_t* next;
 } free_list_t;
 
-int get_bucket_size(size_t size);
+int get_bucket_num(size_t size);
 void coalesceEntries(free_list_t* list);
 void subdivideBucket(size_t size, free_list_t* head);
 void * alloc_aligned(int bucket_idx);
@@ -93,7 +93,7 @@ int my_init() {
 
 // The bucket size is the ceiling of log(size).
 // Note that we leave room for an 8 byte header.
-int get_bucket_size(size_t size) {
+int get_bucket_num(size_t size) {
   int i = 0;
   size += HEADER_SIZE - 1; // room for 8 byte header
   size >>= 5;
@@ -109,7 +109,7 @@ int get_bucket_size(size_t size) {
 void * my_malloc(size_t size) {
   /* add to free list with different size */
   void *p = NULL;
-  int bucket_idx = get_bucket_size(size);
+  int bucket_idx = get_bucket_num(size);
   
   if (free_lists[bucket_idx] != NULL) {
     // If there is a bucket of exactly the right size available, we're good
@@ -362,16 +362,14 @@ void * my_realloc(void *ptr, size_t size) {
   int bucket_num = flist->bucket_num;
   size_t old_size = BUCKET_SIZE(bucket_num);
 
-  // If the new block is smaller than the old one, do nothing.
-  if (size < old_size)
-    return ptr;
-
   // If the new block is smaller than the old one, the pointer stays the same.
   if (size < old_size) {
     if (BUCKET_SIZE(get_bucket_num(size)) < old_size)
       subdivideBucket(size, ptr);
     return ptr;
   }
+
+  newptr = my_malloc(size);
 
   // This is a standard library call that performs a simple memory copy.
   memcpy(newptr, ptr, old_size);
