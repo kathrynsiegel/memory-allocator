@@ -71,6 +71,7 @@ static int add_range(const malloc_impl_t *impl, range_t **ranges, char *lo,
   while (p != NULL) {
     if ((p->lo <= hi && p->hi >= hi) || (p-> lo <= lo && p->hi >= lo)) {
       malloc_error(tracenum, 0, "impl add range failed: payload overlaps another range.");
+      printf("    range: %p - %p; new payload: %p - %p\n", lo, hi, p->lo, p->hi);
     }
     p = p->next;
   }
