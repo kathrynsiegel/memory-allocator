@@ -115,6 +115,8 @@ void * my_malloc(size_t size) {
   free_list_t* head;
   int bucket_idx = get_bucket_num(size);
   size = ALIGN(size);
+  if (size < 32 - HEADER_SIZE)
+    size = 32 - HEADER_SIZE;
   
   if (free_lists[bucket_idx] != NULL) {
     // Check for a bucket in the free list which chould contain size most
