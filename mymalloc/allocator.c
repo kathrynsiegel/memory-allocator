@@ -306,16 +306,13 @@ void coalesceEntries(free_list_t* list) {
   if (prev_bucket_num == b_num) {
     free_list_t* prev_list = (free_list_t*)((char*)list -
         (BUCKET_SIZE(b_num) + HEADER_SIZE));
-
     if (prev_list->is_free == 0x1) {
       coalesceHelper(prev_list, list);
     }
-
   } else {
     // check the bucket in front
     free_list_t* next_list = (free_list_t*)((char*)list + 
         BUCKET_SIZE(b_num) + HEADER_SIZE);
-
     if ((int)(next_list->bucket_num) == b_num && next_list->is_free == 0x1 && mem_heap_hi() > (void*)(next_list + HEADER_SIZE)) {
       coalesceHelper(list, next_list);
     }
@@ -348,6 +345,39 @@ void coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
   list_a->next = new_bucket_list;
   free_lists[new_bucket_num] = list_a;
 
+  // coalesceEntries(list_a);
+}
+
+int coalesceEntriesForRealloc(free_list_t* list) {
+  int prev_bucket_num = list->prev_bucket_num;
+  int b_num = list->bucket_num;
+  // Check the bucket behind this one
+  if (prev_bucket_num == b_num) {
+    free_list_t* prev_list = (free_list_t*)((char*)list -
+        (BUCKET_SIZE(b_num) + HEADER_SIZE));
+    if (prev_list->is_free == 0x1) {
+      // remove prev_list from free list
+      removeFromFreeList(prev_list, &free_lists[b_num]);
+      // adjust list pointer
+      list = prev_list;
+      //change header
+      list->bucket_num = b_num + 1;
+      list->is_free = 0x0;
+      return 1;
+    }
+  } else {
+    // check the bucket in front
+    free_list_t* next_list = (free_list_t*)((char*)list + 
+        BUCKET_SIZE(b_num) + HEADER_SIZE);
+    if ((int)(next_list->bucket_num) == b_num && next_list->is_free == 0x1 && mem_heap_hi() > (void*)(next_list + HEADER_SIZE)) {
+      // remove next_list from free list
+      removeFromFreeList(next_list, &free_lists[b_num]);
+      // change header
+      list->bucket_num = b_num + 1;
+      return 1;
+    }
+  }
+  return 0;
 }
 
 /*
@@ -365,9 +395,21 @@ void * my_realloc(void *ptr, size_t size) {
   // If the new block is smaller than the old one, the pointer stays the same.
   if (size < old_size) {
     if (BUCKET_SIZE(get_bucket_num(size)) < old_size)
-      subdivideBucket(size, ptr);
+      subdivideBucket(size, flist);
     return ptr;
   }
+
+  // find next bucket
+  // int coalesced = 0;
+  // if (BUCKET_SIZE(get_bucket_num(size)) == BUCKET_SIZE(get_bucket_num(old_size))+1) {
+  //   coalesced = coalesceEntriesForRealloc(flist);
+  // } 
+
+  // if (coalesced) {
+  //   ptr = (void*)((char*)flist + HEADER_SIZE);
+  //   return ptr;
+  // }
+    
 
   newptr = my_malloc(size);
 
