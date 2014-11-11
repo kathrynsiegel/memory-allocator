@@ -78,31 +78,18 @@ void *alloc_alignedalt(int bucket_idx);
 
 free_list_t *free_lists[NUM_BUCKETS];
 free_list_t *top_element_bucket;
-int tebucket;
 
-
-// init - Initialize the malloc package.  Called once before any other
-// calls are made.  
+/** 
+* init - Initialize the malloc package.  Called once before any other
+* calls are made.  
+*/
 int my_init() {
-  if (TRACE_CLASS == 6 || TRACE_CLASS == 7) {
-    for (int i = 0; i < NUM_BUCKETS; i++) {
-      free_lists[i] = NULL;
-    }
-    tebucket = -1;
-
-    /* align brk just once */
-    void *brk = mem_heap_hi() + 1;
-    int req_size = CACHE_ALIGN(brk) - (uint64_t)brk;
-    mem_sbrk(req_size);
-    
-    return 0;
-  }
   for (int i = 0; i < NUM_BUCKETS; i++) {
     free_lists[i] = NULL;
   }
   top_element_bucket = NULL;
 
-  /* align brk just once */
+  // align brk just once
   void *brk = mem_heap_hi() + 1;
   int req_size = CACHE_ALIGN(brk) - (uint64_t)brk;
   mem_sbrk(req_size);
@@ -110,8 +97,9 @@ int my_init() {
   return 0;
 }
 
-// The bucket size is the FLOOR of log(size).
-// Note that we leave room for an 8 byte header.
+/** The bucket size is the FLOOR of log(size).
+* Note that we leave room for an 8 byte header.
+*/
 int get_bucket_num(size_t size) {
   int i = 0;
   size += HEADER_SIZE - 1; // room for 8 byte header
@@ -121,16 +109,21 @@ int get_bucket_num(size_t size) {
     size >>= 1;
   }
 
+  // difference between trace 6/7 allocator and normal allocator
+  // is the way bucketing is handled
   if (TRACE_CLASS == 6 || TRACE_CLASS == 7) {
     return i;
   }
+
   if (i == 0)
     return 0;
   return i - 1; 
 }
 
-//  malloc - Allocate a block by incrementing the brk pointer.
-//  Always allocate a block whose size is a multiple of the alignment.
+/**
+* malloc - Allocate a block by incrementing the brk pointer.
+* Always allocate a block whose size is a multiple of the alignment.
+*/
 void * my_malloc(size_t size) {
   if (TRACE_CLASS == 6 || TRACE_CLASS == 7) {
     /* add to free list with different size */
@@ -186,9 +179,9 @@ void * my_malloc(size_t size) {
       // TODO: maybe do this inside alloc_aligned?
       new_list = (free_list_t*)p;
 
-      if (tebucket != -1) {
-        new_list->prev_bucket_size = tebucket;
-        tebucket = bucket_idx;
+      if (top_element_bucket != NULL) {
+        new_list->prev_bucket_size = top_element_bucket->bucket_size;
+        top_element_bucket->bucket_size = bucket_idx;
       } else {
         new_list->prev_bucket_size = -1;
       }
@@ -488,7 +481,7 @@ void subdivideBucket(size_t size, free_list_t* head) {
 
   // find the bucket after this new bucket
   if (new_bucket == mem_heap_hi() - (BUCKET_SIZE(small_bucket_i) + HEADER_SIZE)) {
-    tebucket = small_bucket_i;
+    top_element_bucket->bucket_size = small_bucket_i;
   } else {
     free_list_t* bucket_after = (free_list_t*)((char*)head + 
       BUCKET_SIZE(big_bucket_i) + HEADER_SIZE);
