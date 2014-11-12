@@ -111,7 +111,7 @@ int get_bucket_num(size_t size) {
 
   // difference between trace 6/7 allocator and normal allocator
   // is the way bucketing is handled
-  if (TRACE_CLASS == 6 || TRACE_CLASS == 7) {
+  if (TRACE_CLASS == 7) {
     return i;
   }
 
@@ -125,7 +125,7 @@ int get_bucket_num(size_t size) {
 * Always allocate a block whose size is a multiple of the alignment.
 */
 void * my_malloc(size_t size) {
-  if (TRACE_CLASS == 6 || TRACE_CLASS == 7) {
+  if ( TRACE_CLASS == 7) {
     /* add to free list with different size */
     void *p = NULL;
     int bucket_idx = get_bucket_num(size);
@@ -384,7 +384,7 @@ void addToFreeList(free_list_t* bucket) {
   }
 
   // If the bucket fits at the head of the list, great!
-  if (TRACE_CLASS == 5 || TRACE_CLASS == 8) {
+  if (TRACE_CLASS == 5 || TRACE_CLASS == 8 || TRACE_CLASS == 6) {
     bucket->next = list;
     free_lists[bucket_num] = bucket;
   } else {
@@ -553,7 +553,7 @@ void my_free(void *ptr) {
     return;
   }
 
-  if (TRACE_CLASS == 6 || TRACE_CLASS == 7) {
+  if (TRACE_CLASS == 7) {
     // Cast the pointer to a free list pointer - this means including the header
     // we'd previously ignored
     free_list_t * flist = (free_list_t*)((char*)ptr - HEADER_SIZE);
@@ -589,7 +589,7 @@ void my_free(void *ptr) {
  * bucket. Recurses... ?
  */
 void coalesceEntries(free_list_t* list) {
-  if (TRACE_CLASS == 6 || TRACE_CLASS == 7) {
+  if (TRACE_CLASS == 7) {
     int prev_bucket_size = list->prev_bucket_size;
     int b_num = list->bucket_size;
     // Check the bucket behind this one
@@ -644,7 +644,7 @@ void coalesceEntries(free_list_t* list) {
  * lists, and joins them into a larger bucket.
  */
 void coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
-  if (TRACE_CLASS == 6 || TRACE_CLASS == 7) {
+  if (TRACE_CLASS == 7) {
     int bucket_size = list_a->bucket_size;
     int new_bucket_num = bucket_size + 1;
     // remove both from bucket_idx
@@ -733,7 +733,7 @@ int coalesceEntriesForRealloc(free_list_t* list) {
  * large enough to hold SIZE. Implemented simply in terms of malloc and free.
  */
 void * my_realloc(void *ptr, size_t size) {
-  if (TRACE_CLASS == 6 || TRACE_CLASS == 7) {
+  if (TRACE_CLASS == 7) {
     void *newptr;
 
     // Get the size of the old block of memory.
