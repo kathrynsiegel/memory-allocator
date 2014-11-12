@@ -68,10 +68,12 @@ typedef struct free_list_t {
 
 int get_bucket_num(size_t size);
 void coalesceEntries(free_list_t* list);
+void coalesceEntriesAlt(free_list_t* bucket);
 void subdivideAndAssignBucket(size_t size, free_list_t* head);
 void subdivideBucket(size_t size, free_list_t* head);
 void * alloc_aligned(size_t size);
 void coalesceHelper(free_list_t* list_a, free_list_t* list_b);
+void coalesceHelperAlt(free_list_t* list_a, free_list_t* list_b);
 void removeFromFreeList(free_list_t* bucket, int list_num);
 void removeFromFreeListAlt(free_list_t* bucket, free_list_t** list);
 void *alloc_alignedalt(int bucket_idx);
@@ -565,7 +567,7 @@ void my_free(void *ptr) {
     free_lists[bucket_size] = flist;
     
     // coalesce entries now
-    coalesceEntries(flist);
+    coalesceEntriesAlt(flist);
   } else {
      // Cast the pointer to a free list pointer - this means including the header
     // we'd previously ignored
@@ -578,17 +580,96 @@ void my_free(void *ptr) {
     flist->is_free = 0x1;
 
     // coalesce entries now
-    //coalesceEntries(flist);
+    if (TRACE_CLASS == 2 || TRACE_CLASS == 8)
+      coalesceEntries(flist);
   }
 
  
 }
 
 /*
+ * Coalesces adjacent free buckets to BUCKET as possible into one larger bucket.
+ */
+void coalesceEntries(free_list_t* bucket) {
+  free_list_t* next_bucket = bucket;
+  free_list_t* prev_bucket = bucket;
+
+  // Check the bucket after this one
+  if (bucket != top_element_bucket) {
+    next_bucket = (free_list_t*)((char*)bucket + bucket->bucket_size + HEADER_SIZE);
+  }
+
+  if (next_bucket->is_free != 0x1) {
+    next_bucket = bucket;
+  }
+
+  // Check the bucket before this one
+  if (bucket->prev_bucket_size > 0) {
+    prev_bucket = (free_list_t*)((char*)bucket - (bucket->prev_bucket_size + HEADER_SIZE));
+  }
+
+  if (prev_bucket->is_free != 0x1) {
+    prev_bucket = bucket;
+  }
+
+  if (prev_bucket != next_bucket) {
+    removeFromFreeList(bucket, get_bucket_num(bucket->bucket_size));
+
+    if (prev_bucket->is_free == 0x1)
+      removeFromFreeList(prev_bucket, get_bucket_num(prev_bucket->bucket_size));
+
+    if (next_bucket->is_free == 0x1)
+      removeFromFreeList(next_bucket, get_bucket_num(next_bucket->bucket_size));
+
+    coalesceHelper(prev_bucket, next_bucket);
+  }
+}
+
+/*
+ * Takes two buckets adjacent in memory, removes them from their respective free
+ * lists, and joins them into a larger bucket.
+ * Assumes both buckets have already been removed from the free lists.
+ */
+void coalesceHelper(free_list_t* bucket_a, free_list_t* bucket_b) {
+#ifdef DEBUG
+  printf("coalesce %p and %p\n", bucket_a, bucket_b);
+  printf("bucket a size: %x\n", bucket_a->bucket_size);
+  printf("bucket b size: %x\n", bucket_b->bucket_size);
+#endif
+
+  size_t new_size = (size_t)bucket_b + bucket_b->bucket_size - (size_t)bucket_a;
+
+  // update size of bucket_a 
+  bucket_a->bucket_size = new_size;
+
+#ifdef DEBUG
+  printf("new bucket size: %x\n", bucket_a->bucket_size);
+#endif
+
+  // find the bucket after bucket_b, and reassign the heap top if necessary
+  if (bucket_b == top_element_bucket) {
+    // is it on top of the heap?
+    top_element_bucket = bucket_a;
+  } else {
+    // find our successor
+    free_list_t* bucket_after = (free_list_t*)((char*)bucket_a + new_size + HEADER_SIZE);
+
+    // tell it that we are now bigger
+    bucket_after->prev_bucket_size = new_size;
+  }
+  
+  // add to appropriate free list
+  addToFreeList(bucket_a);
+}
+
+
+
+
+/*
  * Coalesces two adjacent free buckets and makes them into a larger
  * bucket. Recurses... ?
  */
-void coalesceEntries(free_list_t* list) {
+void coalesceEntriesAlt(free_list_t* list) {
   if (TRACE_CLASS == 7) {
     int prev_bucket_size = list->prev_bucket_size;
     int b_num = list->bucket_size;
@@ -597,14 +678,14 @@ void coalesceEntries(free_list_t* list) {
       free_list_t* prev_list = (free_list_t*)((char*)list -
           (BUCKET_SIZE(b_num) + HEADER_SIZE));
       if (prev_list->is_free == 0x1) {
-        coalesceHelper(prev_list, list);
+        coalesceHelperAlt(prev_list, list);
       }
     } else {
       // check the bucket in front
       free_list_t* next_list = (free_list_t*)((char*)list + 
           BUCKET_SIZE(b_num) + HEADER_SIZE);
       if ((int)(next_list->bucket_size) == b_num && next_list->is_free == 0x1 && mem_heap_hi() > (void*)(next_list + HEADER_SIZE)) {
-        coalesceHelper(list, next_list);
+        coalesceHelperAlt(list, next_list);
       }
     }
   } else {
@@ -615,7 +696,7 @@ void coalesceEntries(free_list_t* list) {
     free_list_t* next_list = (free_list_t*)((char*)list + my_size + HEADER_SIZE);
 
     if (list != top_element_bucket && next_list->is_free == 0x1) {
-      coalesceHelper(list, next_list);
+      coalesceHelperAlt(list, next_list);
 
       if (top_element_bucket == next_list)
         top_element_bucket = list;
@@ -627,23 +708,20 @@ void coalesceEntries(free_list_t* list) {
           (prev_bucket_size + HEADER_SIZE));
       
       if (prev_list->is_free == 0x1) {
-        coalesceHelper(prev_list, list);
+        coalesceHelperAlt(prev_list, list);
 
         if (top_element_bucket == list)
           top_element_bucket = prev_list;
       }
     }
   }
-  
-
-  // TODO: recurse?
 }
 
 /*
  * Takes two buckets adjacent in memory, removes them from their respective free
  * lists, and joins them into a larger bucket.
  */
-void coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
+void coalesceHelperAlt(free_list_t* list_a, free_list_t* list_b) {
   if (TRACE_CLASS == 7) {
     int bucket_size = list_a->bucket_size;
     int new_bucket_num = bucket_size + 1;
@@ -695,37 +773,37 @@ void coalesceHelper(free_list_t* list_a, free_list_t* list_b) {
   
 }
 
-int coalesceEntriesForRealloc(free_list_t* list) {
-  int prev_bucket_size = list->prev_bucket_size;
-  int b_num = list->bucket_size;
-  // Check the bucket behind this one
-  if (prev_bucket_size == b_num) {
-    free_list_t* prev_list = (free_list_t*)((char*)list -
-        (BUCKET_SIZE(b_num) + HEADER_SIZE));
-    if (prev_list->is_free == 0x1) {
-      // remove prev_list from free list
-      removeFromFreeListAlt(prev_list, &free_lists[b_num]);
-      // adjust list pointer
-      list = prev_list;
-      //change header
-      list->bucket_size = b_num + 1;
-      list->is_free = 0x0;
-      return 1;
-    }
-  } else {
-    // check the bucket in front
-    free_list_t* next_list = (free_list_t*)((char*)list + 
-        BUCKET_SIZE(b_num) + HEADER_SIZE);
-    if ((int)(next_list->bucket_size) == b_num && next_list->is_free == 0x1 && mem_heap_hi() > (void*)(next_list + HEADER_SIZE)) {
-      // remove next_list from free list
-      removeFromFreeListAlt(next_list, &free_lists[b_num]);
-      // change header
-      list->bucket_size = b_num + 1;
-      return 1;
-    }
-  }
-  return 0;
-}
+// int coalesceEntriesForRealloc(free_list_t* list) {
+//   int prev_bucket_size = list->prev_bucket_size;
+//   int b_num = list->bucket_size;
+//   // Check the bucket behind this one
+//   if (prev_bucket_size == b_num) {
+//     free_list_t* prev_list = (free_list_t*)((char*)list -
+//         (BUCKET_SIZE(b_num) + HEADER_SIZE));
+//     if (prev_list->is_free == 0x1) {
+//       // remove prev_list from free list
+//       removeFromFreeListAlt(prev_list, &free_lists[b_num]);
+//       // adjust list pointer
+//       list = prev_list;
+//       //change header
+//       list->bucket_size = b_num + 1;
+//       list->is_free = 0x0;
+//       return 1;
+//     }
+//   } else {
+//     // check the bucket in front
+//     free_list_t* next_list = (free_list_t*)((char*)list + 
+//         BUCKET_SIZE(b_num) + HEADER_SIZE);
+//     if ((int)(next_list->bucket_size) == b_num && next_list->is_free == 0x1 && mem_heap_hi() > (void*)(next_list + HEADER_SIZE)) {
+//       // remove next_list from free list
+//       removeFromFreeListAlt(next_list, &free_lists[b_num]);
+//       // change header
+//       list->bucket_size = b_num + 1;
+//       return 1;
+//     }
+//   }
+//   return 0;
+// }
 
 
 /*
