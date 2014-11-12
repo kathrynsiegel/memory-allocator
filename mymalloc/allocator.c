@@ -381,10 +381,10 @@ void addToFreeList(free_list_t* bucket) {
   }
 
   // If the bucket fits at the head of the list, great!
-  // if (TRACE_CLASS < 3 || TRACE_CLASS == 6 || TRACE_CLASS == 8) {
-  //   bucket->next = list;
-  //   free_lists[bucket_num] = bucket;
-  // } else {
+  if (TRACE_CLASS == 5 || TRACE_CLASS == 8) {
+    bucket->next = list;
+    free_lists[bucket_num] = bucket;
+  } else {
     if (list->bucket_size >= bucket->bucket_size) {
       bucket->next = list;
       free_lists[bucket_num] = bucket;
@@ -403,7 +403,7 @@ void addToFreeList(free_list_t* bucket) {
 
     bucket->next = list->next;
     list->next = bucket;
-  // }
+  }
   
   /*printf("    added to free list bucket %p, size %d\n", bucket, bucket->bucket_size);*/
 }
