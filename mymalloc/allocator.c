@@ -193,116 +193,118 @@ void * my_malloc(size_t size) {
     new_list->bucket_size = bucket_idx;  // set size
     new_list->is_free = 0;  // in use
     return (void*)((char*)p + HEADER_SIZE);
-  }
-  /* add to free list with different size */
-  void *p = NULL;
-  free_list_t* head;
-  int bucket_idx = get_bucket_num(size);
-  size = ALIGN(size);
-  if (size < 32 - HEADER_SIZE)
-    size = 32 - HEADER_SIZE;
-  
-  if (free_lists[bucket_idx] != NULL) {
-    // Check for a bucket in the free list which chould contain size most
-    // exactly. If we find something here, we're good.
-    head = free_lists[bucket_idx];
-    // if (TRACE_CLASS == 6 || TRACE_CLASS == 7) { //DONE
-    //   p = (void*)head;
-    //   free_lists[bucket_idx] = free_lists[bucket_idx]->next;
-    // } else {
-      
-      free_list_t* prev = NULL;
-
-      // loop through the free list. As soon as we find something which holds
-      // SIZE, assign it and remove it from the list.
-      while (head != NULL) {
-        if (size <= head->bucket_size) {
-          // we've found something that fits
-          if (prev == NULL) {
-            // if it's the first item in the list, just pop off
-            free_lists[bucket_idx] = free_lists[bucket_idx]->next;
-          } else {
-            // otherwise, cut out of the list
-            prev->next = head->next;
-          }
-          p = (void *) head;
-          break;
-        }
-
-        // if we didn't find one, move on
-        prev = head;
-        head = head->next;
-      }
-    // }
-  } 
-
-  // if we didn't find anything yet, check larger buckets
-  if (!p) {
-    bucket_idx++;
-
-    if (free_lists[bucket_idx] != NULL) {
-      
-      // The next bigger size should be a pretty good fit
-      head = free_lists[bucket_idx];
-      free_lists[bucket_idx] = free_lists[bucket_idx]->next;
-      p = (void *) head;
-
-    } else {
-      
-      // Find an open bucket that is at least two times larger than the one we need
-      int open_bucket = bucket_idx + 1;
-      for (; open_bucket < NUM_BUCKETS; ++open_bucket) {
-        if (free_lists[open_bucket] != NULL) {
-          break;
-        }
-      }
-
-      // If we have a free bucket, but it's too big, subdivide it and assign p.
-      if (open_bucket < NUM_BUCKETS) {
-        // break a chunk off a larger bucket and assign that
-        head = free_lists[open_bucket];
-        subdivideAndAssignBucket(size, head);
-        p = (void *) head;
-        
-        // something went wrong if P is null
-        if (p == NULL)
-          return NULL;
-      }
-    }
-  }
-
-  free_list_t* new_list;
-
-  if (p) {
-    if (p == (void *)-1) {
-      // an error occurred, and we couldn't allocate memory.
-      return NULL;
-    }
-    new_list = head;
-
-  // If p still has not been assigned, we need new heap space. 
   } else {
-    // allocate a new item.
-    p = alloc_aligned(size);
-    new_list = (free_list_t*)p;
-    if (top_element_bucket != NULL) {
-      new_list->prev_bucket_size = top_element_bucket->bucket_size;
-    } else {
-      new_list->prev_bucket_size = 0;
+    /* add to free list with different size */
+    void *p = NULL;
+    free_list_t* head;
+    int bucket_idx = get_bucket_num(size);
+    size = ALIGN(size);
+    if (size < 32 - HEADER_SIZE)
+      size = 32 - HEADER_SIZE;
+    
+    if (free_lists[bucket_idx] != NULL) {
+      // Check for a bucket in the free list which chould contain size most
+      // exactly. If we find something here, we're good.
+      head = free_lists[bucket_idx];
+      // if (TRACE_CLASS == 6 || TRACE_CLASS == 7) { //DONE
+      //   p = (void*)head;
+      //   free_lists[bucket_idx] = free_lists[bucket_idx]->next;
+      // } else {
+        
+        free_list_t* prev = NULL;
+
+        // loop through the free list. As soon as we find something which holds
+        // SIZE, assign it and remove it from the list.
+        while (head != NULL) {
+          if (size <= head->bucket_size) {
+            // we've found something that fits
+            if (prev == NULL) {
+              // if it's the first item in the list, just pop off
+              free_lists[bucket_idx] = free_lists[bucket_idx]->next;
+            } else {
+              // otherwise, cut out of the list
+              prev->next = head->next;
+            }
+            p = (void *) head;
+            break;
+          }
+
+          // if we didn't find one, move on
+          prev = head;
+          head = head->next;
+        }
+      // }
+    } 
+
+    // if we didn't find anything yet, check larger buckets
+    if (!p) {
+      bucket_idx++;
+
+      if (free_lists[bucket_idx] != NULL) {
+        
+        // The next bigger size should be a pretty good fit
+        head = free_lists[bucket_idx];
+        free_lists[bucket_idx] = free_lists[bucket_idx]->next;
+        p = (void *) head;
+
+      } else {
+        
+        // Find an open bucket that is at least two times larger than the one we need
+        int open_bucket = bucket_idx + 1;
+        for (; open_bucket < NUM_BUCKETS; ++open_bucket) {
+          if (free_lists[open_bucket] != NULL) {
+            break;
+          }
+        }
+
+        // If we have a free bucket, but it's too big, subdivide it and assign p.
+        if (open_bucket < NUM_BUCKETS) {
+          // break a chunk off a larger bucket and assign that
+          head = free_lists[open_bucket];
+          subdivideAndAssignBucket(size, head);
+          p = (void *) head;
+          
+          // something went wrong if P is null
+          if (p == NULL)
+            return NULL;
+        }
+      }
     }
-    top_element_bucket = new_list;
-    new_list->bucket_size = size;
+
+    free_list_t* new_list;
+
+    if (p) {
+      if (p == (void *)-1) {
+        // an error occurred, and we couldn't allocate memory.
+        return NULL;
+      }
+      new_list = head;
+
+    // If p still has not been assigned, we need new heap space. 
+    } else {
+      // allocate a new item.
+      p = alloc_aligned(size);
+      new_list = (free_list_t*)p;
+      if (top_element_bucket != NULL) {
+        new_list->prev_bucket_size = top_element_bucket->bucket_size;
+      } else {
+        new_list->prev_bucket_size = 0;
+      }
+      top_element_bucket = new_list;
+      new_list->bucket_size = size;
+    }
+
+    // if (new_list->bucket_size > 0x10000000)
+      /*printf("Big bucket size: %d\n", new_list->bucket_size);*/
+
+    // fill header info and increment the pointer by HEADER_SIZE
+    // we made a free_list, but don't use it like a free_list: the cast is strictly to
+    // align the header in the right place.
+    new_list->is_free = 0x0;  // indicate that it's in use
+    /*printf(" * malloc bucket %p, size %d\n", new_list, new_list->bucket_size);*/
+    return (void*)((char*)p + HEADER_SIZE);
   }
-
-  if (new_list->bucket_size > 0x10000000)
-    /*printf("Big bucket size: %d\n", new_list->bucket_size);*/
-
-  // fill header info and increment the pointer by HEADER_SIZE
-  // we made a free_list, but don't use it like a free_list: the cast is strictly to
-  // align the header in the right place.
-  new_list->is_free = 0x0;  // indicate that it's in use
-  /*printf(" * malloc bucket %p, size %d\n", new_list, new_list->bucket_size);*/
-  return (void*)((char*)p + HEADER_SIZE);
+  
 }
 
 /* 
@@ -379,24 +381,30 @@ void addToFreeList(free_list_t* bucket) {
   }
 
   // If the bucket fits at the head of the list, great!
-  if (list->bucket_size >= bucket->bucket_size) {
-    bucket->next = list;
-    free_lists[bucket_num] = bucket;
-    /*printf("    added bucket %p, size %x to head of free list %d\n",
-        bucket, bucket->bucket_size, bucket_num);*/
-    return;
-  }
+  // if (TRACE_CLASS < 3 || TRACE_CLASS == 6 || TRACE_CLASS == 8) {
+  //   bucket->next = list;
+  //   free_lists[bucket_num] = bucket;
+  // } else {
+    if (list->bucket_size >= bucket->bucket_size) {
+      bucket->next = list;
+      free_lists[bucket_num] = bucket;
+      /*printf("    added bucket %p, size %x to head of free list %d\n",
+          bucket, bucket->bucket_size, bucket_num);*/
+      return;
+    }
 
-  // Otherwise, iterate until we find something larger than the bucket or reach
-  // the end of the list
-  while (list->next != NULL) {
-    if (list->next->bucket_size >= bucket->bucket_size)
-      break;
-    list = list->next;
-  }
+    // Otherwise, iterate until we find something larger than the bucket or reach
+    // the end of the list
+    while (list->next != NULL) {
+      if (list->next->bucket_size >= bucket->bucket_size)
+        break;
+      list = list->next;
+    }
 
-  bucket->next = list->next;
-  list->next = bucket;
+    bucket->next = list->next;
+    list->next = bucket;
+  // }
+  
   /*printf("    added to free list bucket %p, size %d\n", bucket, bucket->bucket_size);*/
 }
 
