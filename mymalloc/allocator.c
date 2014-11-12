@@ -48,24 +48,31 @@
 
 // The smallest aligned size that will hold a size_t value.
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
-#define MAX_SIZE_LOG_2 29
-#define MIN_SIZE_LOG_2 5
+
+// Define constants for bucketing.
+// Determined maximum size bucket due to memory constraints.
+// Determined minimum size bucket as half of the cache line size.
+#define MAX_SIZE_LOG_2 29 // max bucket size as a power of 2
+#define MIN_SIZE_LOG_2 5 // min bucket size as a power of 2
 #define NUM_BUCKETS MAX_SIZE_LOG_2 - MIN_SIZE_LOG_2
 #define SIZE_CACHE_LINE 64
-#define MIN_BUCKET_SIZE 32   
+#define MIN_BUCKET_SIZE 32 // min bucket size
 #define BUCKET_SIZE(i) ((1 << ((i) + MIN_SIZE_LOG_2)) - (HEADER_SIZE))
 #define FITS_INTO_BUCKET(size, bucket_idx) ((size) <= (BUCKET_SIZE(bucket_idx)))
+
+// only for certain traces
+#define MAX_LEN_LIST 80 // the max length block list for a bucket is 80
 
 
 // the linked list data structure that holds the blocks we want to free
 typedef struct free_list_t {
-  unsigned int bucket_size: 30;
-  unsigned int prev_bucket_size: 30;
-  unsigned int is_free: 4;
-  struct free_list_t* next;
+  unsigned int bucket_size: 30; // The bucket this memory block belongs to
+  unsigned int prev_bucket_size: 30; // The bucket the previous memory block belongs to
+  unsigned int is_free: 4; // 0x1 if the block is free, and 0x0 if the block is not free
+  struct free_list_t* next; // pointer to the next memory block
 } free_list_t;
 
-#define HEADER_SIZE 8
+#define HEADER_SIZE 8 // all headers are at most 8 bytes
 
 int get_bucket_num(size_t size);
 void coalesceEntries(free_list_t* list);
@@ -128,40 +135,35 @@ void * my_malloc(size_t size) {
     size = MIN_BUCKET_SIZE - HEADER_SIZE;
   
   if (free_lists[bucket_idx] != NULL) {
-    // Check for a bucket in the free list which chould contain size most
+    // Check for a bucket in the free list which could contain the block most
     // exactly. If we find something here, we're good.
     head = free_lists[bucket_idx];
-    // if (TRACE_CLASS == 6 || TRACE_CLASS == 7) { //DONE
-    //   p = (void*)head;
-    //   free_lists[bucket_idx] = free_lists[bucket_idx]->next;
-    // } else {
       
-      free_list_t* prev = NULL;
+    free_list_t* prev = NULL;
 
-      // loop through the free list. As soon as we find something which holds
-      // SIZE, assign it and remove it from the list.
-      int count = 0;
-      while (head != NULL && count < 80) {
-        if (size <= head->bucket_size) {
-          // we've found something that fits
-          if (prev == NULL) {
-            // if it's the first item in the list, just pop off
-            free_lists[bucket_idx] = free_lists[bucket_idx]->next;
-          } else {
-            // otherwise, cut out of the list
-            prev->next = head->next;
-          }
-          p = (void *) head;
-          break;
+    // loop through the free list. As soon as we find something which holds
+    // SIZE, assign it and remove it from the list.
+    int count = 0;
+    while (head != NULL && count < MAX_LEN_LIST) {
+      if (size <= head->bucket_size) {
+        // we've found something that fits
+        if (prev == NULL) {
+          // if it's the first item in the list, just pop off
+          free_lists[bucket_idx] = free_lists[bucket_idx]->next;
+        } else {
+          // otherwise, cut out of the list
+          prev->next = head->next;
         }
-
-        // if we didn't find one, move on
-        prev = head;
-        head = head->next;
-        if (TRACE_CLASS == 8 || TRACE_CLASS == 6 || TRACE_CLASS == 5)
-          count++;
+        p = (void *) head;
+        break;
       }
-    // }
+
+      // if we didn't find one, move on
+      prev = head;
+      head = head->next;
+      if (TRACE_CLASS == 8 || TRACE_CLASS == 6 || TRACE_CLASS == 5)
+        count++;
+    }
   } 
 
   // if we didn't find anything yet, check larger buckets
