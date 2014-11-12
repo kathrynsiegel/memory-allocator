@@ -161,6 +161,8 @@ void * my_malloc(size_t size) {
       // if we didn't find one, move on
       prev = head;
       head = head->next;
+
+      // only restrict the number of bins searched on certain traces
       if (TRACE_CLASS == 8 || TRACE_CLASS == 6 || TRACE_CLASS == 5)
         count++;
     }
@@ -233,7 +235,6 @@ void * my_malloc(size_t size) {
   // align the header in the right place.
   new_list->is_free = 0x0;  // indicate that it's in use
   return (void*)((char*)p + HEADER_SIZE);
-  
 }
 
 /* 
@@ -262,9 +263,12 @@ void removeFromFreeList(free_list_t* bucket, int list_num) {
   }
   bucket->next = NULL;
   return;
-  
 }
 
+/** Note: Only used by trace 7.
+* On trace 7, it is optimal to use a different method to add items to the free list
+* So, we need a different method to remove from the free list.
+*/
 void removeFromFreeListAlt(free_list_t* bucket, free_list_t** list) {
   if (bucket == *list) {
     // if this bucket is at the head of its list, great!
@@ -292,22 +296,22 @@ void removeFromFreeListAlt(free_list_t* bucket, free_list_t** list) {
  * Add a bucket to a linked list in sorted order.
  */
 void addToFreeList(free_list_t* bucket) {
-  /*printf("adding to free list bucket %p, size %x\n", bucket, bucket->bucket_size);*/
   int bucket_num = get_bucket_num(bucket->bucket_size);
-  /*printf("bucket_num: %d\n", bucket_num);*/
   free_list_t* list = free_lists[bucket_num];
 
+  // If there are no elements in the list, just add the new block to the bucket.
   if (list == NULL) {
     bucket->next = NULL;
     free_lists[bucket_num] = bucket;
     return;
   }
 
-  // If the bucket fits at the head of the list, great!
   if (TRACE_CLASS == 5 || TRACE_CLASS == 8 || TRACE_CLASS == 6) {
+    // For certain traces, it is optimal to not sort the list.
     bucket->next = list;
     free_lists[bucket_num] = bucket;
-  } else {
+  } else { // Insert the item in its sorted order
+    // If the bucket fits at the head of the list, great!
     if (list->bucket_size >= bucket->bucket_size) {
       bucket->next = list;
       free_lists[bucket_num] = bucket;
