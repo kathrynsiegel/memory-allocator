@@ -3,7 +3,7 @@ TARGETS := mdriver
 LOCKER=/afs/csail/proj/courses/6.172
 CC := gcc
 # You can add -Werr to GCC to force all warnings to turn into errors
-CFLAGS := -std=gnu99 -g -Wall -Wno-write-strings
+CFLAGS := -std=gnu99 -g -Wall -Wno-write-strings -w
 LDFLAGS := -lpthread
 # Macros defined by the user or OpenTuner
 PARAMS :=
