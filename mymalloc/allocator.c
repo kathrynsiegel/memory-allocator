@@ -811,66 +811,38 @@ void coalesceHelperAlt(free_list_t* list_a, free_list_t* list_b) {
  * large enough to hold SIZE. Implemented simply in terms of malloc and free.
  */
 void * my_realloc(void *ptr, size_t size) {
-  if (TRACE_CLASS == 7) {
-    void *newptr;
+  // Get the size of the old block of memory.
+  size = ALIGN(size);
+  free_list_t * flist = (free_list_t*)((char*)ptr - HEADER_SIZE);
+  size_t old_size = flist->bucket_size;
 
-    // Get the size of the old block of memory.
-    free_list_t * flist = (free_list_t*)((char*)ptr - HEADER_SIZE);
-    int bucket_size = flist->bucket_size;
-    size_t old_size = BUCKET_SIZE(bucket_size);
+  // If the new block is smaller than the old one, the pointer stays the same.
+  if (size <= old_size) {
+    // If they would go into two different buckets, free the end chunk of the
+    // realloc'd space for use by others
+    if (get_bucket_num(size) < get_bucket_num(old_size) - 1)
+      subdivideAndAssignBucket(size, flist);
 
-    // If the new block is smaller than the old one, the pointer stays the same.
-    if (size < old_size) {
-      if (BUCKET_SIZE(get_bucket_num(size)) < old_size)
-        subdivideBucket(size, flist);
-      return ptr;
-    }
-
-    newptr = my_malloc(size);
-
-    // This is a standard library call that performs a simple memory copy.
-    memcpy(newptr, ptr, old_size);
-
-    // Release the old block.
-    my_free(ptr);
-
-    // Return a pointer to the new block.
-    return newptr;
-  } else {
-    // Get the size of the old block of memory.
-    size = ALIGN(size);
-    free_list_t * flist = (free_list_t*)((char*)ptr - HEADER_SIZE);
-    size_t old_size = flist->bucket_size;
-
-    // If the new block is smaller than the old one, the pointer stays the same.
-    if (size <= old_size) {
-      // If they would go into two different buckets, free the end chunk of the
-      // realloc'd space for use by others
-      if (get_bucket_num(size) < get_bucket_num(old_size) - 1)
-        subdivideAndAssignBucket(size, flist);
-
-      return ptr;
-    }
-
-    // If the old block is at the end of the stack, just extend the stack
-    if (flist == top_element_bucket) {
-      mem_sbrk(size - old_size);
-      flist->bucket_size = size;
-      return ptr;
-    }
-
-    void *newptr = my_malloc(size);
-
-    // This is a standard library call that performs a simple memory copy.
-    memcpy(newptr, ptr, old_size);
-
-    // Release the old block.
-    my_free(ptr);
-
-    // Return a pointer to the new block.
-    return newptr;
+    return ptr;
   }
-  
+
+  // If the old block is at the end of the stack, just extend the stack
+  if (flist == top_element_bucket) {
+    mem_sbrk(size - old_size);
+    flist->bucket_size = size;
+    return ptr;
+  }
+
+  void *newptr = my_malloc(size);
+
+  // This is a standard library call that performs a simple memory copy.
+  memcpy(newptr, ptr, old_size);
+
+  // Release the old block.
+  my_free(ptr);
+
+  // Return a pointer to the new block.
+  return newptr;
 }
 
 // XXX: This is never used.
