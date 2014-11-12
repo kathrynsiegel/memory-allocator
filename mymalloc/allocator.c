@@ -215,7 +215,8 @@ void * my_malloc(size_t size) {
 
         // loop through the free list. As soon as we find something which holds
         // SIZE, assign it and remove it from the list.
-        while (head != NULL) {
+        int count = 0;
+        while (head != NULL && count < 100) {
           if (size <= head->bucket_size) {
             // we've found something that fits
             if (prev == NULL) {
@@ -232,6 +233,8 @@ void * my_malloc(size_t size) {
           // if we didn't find one, move on
           prev = head;
           head = head->next;
+          if (TRACE_CLASS == 8 || TRACE_CLASS == 6 || TRACE_CLASS == 5)
+            count++;
         }
       // }
     } 
